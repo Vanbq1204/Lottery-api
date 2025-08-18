@@ -93,17 +93,42 @@ const formatVietnamDateTime = (date) => {
  * @returns {Object} {startOfDay, endOfDay} - Date objects
  */
 const getVietnamDayRange = (dateString = null) => {
-  const targetDate = dateString ? new Date(dateString + 'T00:00:00') : getVietnamTime();
+  let targetDate;
   
-  // Tạo thời điểm đầu ngày (00:00:00) theo múi giờ Việt Nam
-  const startOfDay = new Date(targetDate);
-  startOfDay.setHours(0, 0, 0, 0);
+  if (dateString) {
+    // Nếu có dateString, tạo date từ string đó
+    targetDate = new Date(dateString + 'T00:00:00+07:00');
+  } else {
+    // Nếu không có, lấy ngày hiện tại theo VN timezone
+    const now = new Date();
+    const vietnamTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Ho_Chi_Minh"}));
+    targetDate = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth(), vietnamTime.getDate());
+  }
   
-  // Tạo thời điểm cuối ngày (23:59:59) theo múi giờ Việt Nam  
-  const endOfDay = new Date(targetDate);
-  endOfDay.setHours(23, 59, 59, 999);
+  // Tạo thời điểm đầu ngày (00:00:00) theo múi giờ Việt Nam (UTC+7)
+  const startOfDay = new Date(targetDate.getTime() - (7 * 60 * 60 * 1000)); // Trừ 7 giờ để convert về UTC
+  
+  // Tạo thời điểm cuối ngày (23:59:59) theo múi giờ Việt Nam (UTC+7)
+  const endOfDay = new Date(targetDate.getTime() + (16 * 60 * 60 * 1000) + (59 * 60 * 1000) + (59 * 1000) + 999); // Cộng 16h59m59s999ms để convert về UTC
   
   return { startOfDay, endOfDay };
+};
+
+/**
+ * Debug function để kiểm tra timezone
+ * @param {string} dateString - Ngày theo định dạng YYYY-MM-DD
+ * @returns {Object} Debug info
+ */
+const debugVietnamDayRange = (dateString) => {
+  const { startOfDay, endOfDay } = getVietnamDayRange(dateString);
+  
+  return {
+    inputDate: dateString,
+    startOfDay: startOfDay.toISOString(),
+    endOfDay: endOfDay.toISOString(),
+    startOfDayLocal: startOfDay.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+    endOfDayLocal: endOfDay.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+  };
 };
 
 module.exports = {
@@ -114,5 +139,6 @@ module.exports = {
   toVietnamTime,
   isBeforeCutoffTime,
   formatVietnamDateTime,
-  getVietnamDayRange
+  getVietnamDayRange,
+  debugVietnamDayRange
 }; 
