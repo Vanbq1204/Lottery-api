@@ -9,7 +9,7 @@ const app = express();
 // Cấu hình CORS cho production
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.FRONTEND_URL, 'https://lottery-web-*.vercel.app', 'https://*.vercel.app']
+    ? [process.env.FRONTEND_URL, 'https://lottery-web-lemon.vercel.app']
     : ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true,
   optionsSuccessStatus: 200
