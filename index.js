@@ -60,11 +60,13 @@ mongoose.connect(MONGODB_URI)
     console.log('✅ Connected to MongoDB');
     
     // Tạo dữ liệu mẫu nếu cần
-    initializeData();
+    initializeData().catch(err => {
+      console.error('❌ Error initializing data:', err);
+    });
   })
   .catch((error) => {
     console.error('❌ MongoDB connection error:', error);
-    process.exit(1);
+    // Không exit process, chỉ log error
   });
 
 // Khởi tạo dữ liệu mẫu
@@ -165,7 +167,8 @@ app.use('*', (req, res) => {
 
 const PORT = process.env.PORT || 5001;
 
-app.listen(PORT, () => {
+// Start server regardless of database connection
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server is running on port ${PORT}`);
   console.log(`📍 API URL: http://localhost:${PORT}`);
   console.log(`🏥 Health check: http://localhost:${PORT}/api/health`);
