@@ -1,4 +1,4 @@
-const LotteryResult = require('../models/LotteryResult');
+const LotteryResult = require('../models/lotteryResult');
 const User = require('../models/User');
 const Store = require('../models/Store');
 

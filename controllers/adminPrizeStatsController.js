@@ -1,7 +1,7 @@
 const WinningInvoice = require('../models/WinningInvoice');
 const Store = require('../models/Store');
 const User = require('../models/User');
-const LotteryResult = require('../models/LotteryResult');
+const LotteryResult = require('../models/lotteryResult');
 const { getVietnamDayRange } = require('../utils/dateUtils');
 
 // Helper function to extract loto numbers from lottery result

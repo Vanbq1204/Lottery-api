@@ -60,7 +60,7 @@ const generateXienQuayCombinations = (numbers) => {
   
   return combinations;
 };
-const LotteryResult = require('../models/LotteryResult');
+const LotteryResult = require('../models/lotteryResult');
 
 // Hàm lấy tất cả số cuối 2 chữ số từ kết quả xổ số
 const extractLotoNumbers = (lotteryResult) => {
