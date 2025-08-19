@@ -1349,8 +1349,9 @@ const calculatePrizesForDate = async (req, res) => {
       return res.status(400).json({ message: 'Vui lòng cung cấp ngày cần tính thưởng' });
     }
     
-    // Sử dụng utility để tạo range thời gian theo múi giờ Việt Nam
-    const { startOfDay, endOfDay } = getVietnamDayRange(date);
+    // Sử dụng timezone Việt Nam trực tiếp để tạo range thời gian
+    const startOfDay = new Date(date + 'T00:00:00+07:00');
+    const endOfDay = new Date(date + 'T23:59:59.999+07:00');
     
     // Lấy tất cả hóa đơn trong ngày của cửa hàng dựa trên printedAt
     const filter = {
@@ -1428,7 +1429,8 @@ const getWinningInvoices = async (req, res) => {
     let filter = { storeId: user.storeId };
     
     if (date) {
-      const { startOfDay, endOfDay } = getVietnamDayRange(date);
+      const startOfDay = new Date(date + 'T00:00:00+07:00');
+      const endOfDay = new Date(date + 'T23:59:59.999+07:00');
       filter.lotteryDate = {
         $gte: startOfDay,
         $lte: endOfDay
