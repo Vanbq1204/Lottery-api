@@ -231,8 +231,14 @@ const getAdminPrizeStatistics = async (req, res) => {
                 }
                 
                 statistics.loto.winningNumbers[num].count += 1; // Số lần xuất hiện trong hóa đơn
-                statistics.loto.winningNumbers[num].totalPoints += totalPoints; // Tổng điểm cược
-                statistics.loto.winningNumbers[num].totalPrize += prizeAmount;
+                
+                // Tính tổng điểm dựa trên số nháy thực tế
+                const totalPointsWithHits = totalPoints * actualHitCount;
+                statistics.loto.winningNumbers[num].totalPoints += totalPointsWithHits; // Tổng điểm = điểm cược × số nháy
+                
+                // Tính thưởng cho từng con lô dựa trên điểm cược và multiplier
+                const lotoPrize = totalPoints * multiplier * 1000;
+                statistics.loto.winningNumbers[num].totalPrize += lotoPrize;
                 
                 console.log(`🔍 Loto ${num}: hitCount=${actualHitCount}, totalPoints=${statistics.loto.winningNumbers[num].totalPoints}, prize=${statistics.loto.winningNumbers[num].totalPrize}`);
               });
