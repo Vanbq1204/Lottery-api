@@ -1228,7 +1228,7 @@ const calculate3sPrize = async (invoiceItem, lotteryResult, storeId) => {
 };
 
 // Hàm tính thưởng cho một hóa đơn
-const calculateInvoicePrize = async (invoice, lotteryDate) => {
+const calculateInvoicePrize = async (invoice, lotteryDate, inputDate) => {
   try {
     // Tìm kết quả xổ số theo ngày
     const startOfDay = new Date(lotteryDate);
@@ -1309,6 +1309,10 @@ const calculateInvoicePrize = async (invoice, lotteryDate) => {
     if (winningItems.length > 0) {
       const totalPrizeAmount = winningItems.reduce((sum, item) => sum + item.prizeAmount, 0);
       
+      // Tạo lotteryDate đúng timezone Việt Nam
+      // Sử dụng inputDate (YYYY-MM-DD) để tạo lotteryDate chính xác
+      const vietnamLotteryDate = new Date(inputDate + 'T00:00:00+07:00');
+      
       return {
         invoiceId: `WIN_${invoice.invoiceId}`,
         originalInvoiceId: invoice.invoiceId,
@@ -1316,8 +1320,8 @@ const calculateInvoicePrize = async (invoice, lotteryDate) => {
         employeeId: invoice.employeeId,
         adminId: invoice.adminId,
         customerName: invoice.customerName,
-        lotteryDate: new Date(lotteryDate.getFullYear(), lotteryDate.getMonth(), lotteryDate.getDate()),
-        date: lotteryDate.toISOString().split('T')[0], // Sử dụng ngày xổ số thay vì printedAt
+        lotteryDate: vietnamLotteryDate, // Sử dụng timezone Việt Nam
+        date: inputDate, // Sử dụng ngày xổ số thay vì printedAt
         winningItems: winningItems,
         totalPrizeAmount: totalPrizeAmount
       };
@@ -1374,7 +1378,7 @@ const calculatePrizesForDate = async (req, res) => {
     const winningInvoices = [];
     
     for (const invoice of invoices) {
-      const winningData = await calculateInvoicePrize(invoice, startOfDay);
+      const winningData = await calculateInvoicePrize(invoice, startOfDay, date);
       if (winningData) {
         // Kiểm tra xem đã tồn tại chưa
         const existingWinning = await WinningInvoice.findOne({ 
