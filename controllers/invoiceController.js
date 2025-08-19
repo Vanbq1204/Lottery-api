@@ -50,7 +50,7 @@ const saveInvoice = async (req, res) => {
       totalAmount,
       customerPaid,
       changeAmount,
-      printedAt: new Date(new Date().getTime() - (7 * 60 * 60 * 1000))
+      printedAt: new Date()
     });
 
     const savedInvoice = await newInvoice.save();
@@ -99,12 +99,14 @@ const getInvoicesByStore = async (req, res) => {
       query.printedAt = {};
       
       if (startDate) {
-        const { startOfDay } = getVietnamDayRange(startDate);
+        // Create Vietnam timezone range for the date
+        const startOfDay = new Date(startDate + 'T00:00:00+07:00');
         query.printedAt.$gte = startOfDay;
       }
       
       if (endDate) {
-        const { endOfDay } = getVietnamDayRange(endDate);
+        // Create Vietnam timezone range for the date
+        const endOfDay = new Date(endDate + 'T23:59:59.999+07:00');
         query.printedAt.$lte = endOfDay;
       }
     }
@@ -152,12 +154,14 @@ const getInvoicesByAdmin = async (req, res) => {
       query.printedAt = {};
       
       if (startDate) {
-        const { startOfDay } = getVietnamDayRange(startDate);
+        // Create Vietnam timezone range for the date
+        const startOfDay = new Date(startDate + 'T00:00:00+07:00');
         query.printedAt.$gte = startOfDay;
       }
       
       if (endDate) {
-        const { endOfDay } = getVietnamDayRange(endDate);
+        // Create Vietnam timezone range for the date
+        const endOfDay = new Date(endDate + 'T23:59:59.999+07:00');
         query.printedAt.$lte = endOfDay;
       }
     }
