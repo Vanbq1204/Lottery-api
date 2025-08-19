@@ -222,8 +222,7 @@ const getAdminPrizeStatistics = async (req, res) => {
                   statistics.loto.winningNumbers[num] = {
                     count: 0,
                     hitCount: actualHitCount, // Số nháy từ KQXS (không cộng dồn)
-                    totalBetPoints: 0, // Tổng điểm cược (chưa nhân nháy)
-                    totalPoints: 0, // Tổng điểm sau khi nhân nháy
+                    totalPoints: 0,
                     totalPrize: 0
                   };
                 } else {
@@ -233,15 +232,9 @@ const getAdminPrizeStatistics = async (req, res) => {
                 
                 statistics.loto.winningNumbers[num].count += 1; // Số lần xuất hiện trong hóa đơn
                 
-                // Cộng dồn điểm cược (chưa nhân nháy)
-                statistics.loto.winningNumbers[num].totalBetPoints += totalPoints;
-                
-                // Tính tổng điểm sau khi nhân nháy (tính lại từ đầu)
-                statistics.loto.winningNumbers[num].totalPoints = statistics.loto.winningNumbers[num].totalBetPoints * actualHitCount;
-                
-                // Tính thưởng cho từng con lô dựa trên điểm cược và multiplier
-                const lotoPrize = totalPoints * multiplier * 1000;
-                statistics.loto.winningNumbers[num].totalPrize += lotoPrize;
+                // Cộng dồn điểm và tiền thưởng (giống logic nhân viên)
+                statistics.loto.winningNumbers[num].totalPoints += totalPoints;
+                statistics.loto.winningNumbers[num].totalPrize += (totalPoints * multiplier * 1000);
                 
                 console.log(`🔍 Loto ${num}: hitCount=${actualHitCount}, totalPoints=${statistics.loto.winningNumbers[num].totalPoints}, prize=${statistics.loto.winningNumbers[num].totalPrize}`);
               });
