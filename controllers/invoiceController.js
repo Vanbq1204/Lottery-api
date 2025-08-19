@@ -50,7 +50,7 @@ const saveInvoice = async (req, res) => {
       totalAmount,
       customerPaid,
       changeAmount,
-      printedAt: new Date()
+      printedAt: new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Ho_Chi_Minh"}))
     });
 
     const savedInvoice = await newInvoice.save();
