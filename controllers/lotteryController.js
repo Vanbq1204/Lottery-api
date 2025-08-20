@@ -24,33 +24,39 @@ const saveLotteryResult = async (req, res) => {
     });
     
     if (existingResult) {
-      // Đã có kết quả xổ số rồi - từ chối lưu
-      const openDate = new Date(existingResult.openTime).toLocaleDateString('vi-VN');
-      return res.status(400).json({
-        success: false,
-        message: `Đã có kết quả xổ số ngày ${openDate} (${turnNum})`,
-        existingResult: existingResult
+      // Update existing result
+      existingResult.openTime = openTime;
+      existingResult.openNum = openNum;
+      existingResult.results = results;
+      existingResult.createdBy = userId;
+      
+      await existingResult.save();
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Cập nhật kết quả xổ số thành công',
+        lotteryResult: existingResult
+      });
+    } else {
+      // Create new result
+      const newLotteryResult = new LotteryResult({
+        turnNum,
+        openTime,
+        openNum,
+        results,
+        createdBy: userId,
+        storeId: user.storeId,
+        adminId: store.adminId
+      });
+
+      await newLotteryResult.save();
+
+      return res.status(201).json({
+        success: true,
+        message: 'Lưu kết quả xổ số thành công',
+        lotteryResult: newLotteryResult
       });
     }
-
-    // Create new result
-    const newLotteryResult = new LotteryResult({
-      turnNum,
-      openTime,
-      openNum,
-      results,
-      createdBy: userId,
-      storeId: user.storeId,
-      adminId: store.adminId
-    });
-
-    await newLotteryResult.save();
-
-    return res.status(201).json({
-      success: true,
-      message: 'Lưu kết quả xổ số thành công',
-      lotteryResult: newLotteryResult
-    });
   } catch (error) {
     console.error('Save lottery result error:', error);
     return res.status(500).json({
