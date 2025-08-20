@@ -88,7 +88,7 @@ const getAdminPrizeStatistics = async (req, res) => {
       const { startOfDay, endOfDay } = getVietnamDayRange(date);
       
       dateFilter = {
-        lotteryDate: {
+        createdAt: {
           $gte: startOfDay,
           $lte: endOfDay
         }

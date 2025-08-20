@@ -54,10 +54,10 @@ const getPrizeStatistics = async (req, res) => {
     // Tạo date range với múi giờ Việt Nam
     const { startOfDay, endOfDay } = getVietnamDayRange(date);
 
-    // Lấy winning invoices trong ngày theo lotteryDate VÀ storeId của user
+    // Lấy winning invoices trong ngày theo createdAt VÀ storeId của user
     const winningInvoices = await WinningInvoice.find({
       storeId: user.storeId, // ✅ Thêm filter theo storeId
-      lotteryDate: {
+      createdAt: {
         $gte: startOfDay,
         $lte: endOfDay
       }

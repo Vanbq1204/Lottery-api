@@ -141,6 +141,7 @@ const getStoreStatistics = async (req, res) => {
       dauTotal: 0,
       ditTotal: 0,
       boTotal: 0,
+      tongKepDauDitBoTotal: 0, // Tổng tiền khách trả cho nhóm tổng/kép/đầu/đít/bộ
       xienTotal: 0,
       xienquayTotal: 0,
       loto: {}, // Will store loto numbers and their points
@@ -159,7 +160,7 @@ const getStoreStatistics = async (req, res) => {
     invoices.forEach(invoice => {
       if (invoice.items && Array.isArray(invoice.items)) {
         invoice.items.forEach(item => {
-          // Sử dụng totalAmount của từng item
+          // Sử dụng totalAmount của từng item cho tổng tiền khách trả
           const betAmount = (item.totalAmount || 0);
           stats.totalRevenue += betAmount;
 
@@ -198,9 +199,11 @@ const getStoreStatistics = async (req, res) => {
               break;
 
             case 'tong':
-              // Sử dụng amount (số tiền cược thực tế) thay vì totalAmount
-              const tongBetAmount = item.amount || 0;
+              // Sử dụng totalAmount (số tiền khách trả) thay vì amount
+              const tongBetAmount = item.totalAmount || 0;
               stats.tongTotal += tongBetAmount;
+              // Cộng tổng tiền khách trả cho nhóm tổng/kép/đầu/đít/bộ
+              stats.tongKepDauDitBoTotal += betAmount;
               if (item.numbers) {
                 const numbers = item.numbers.split(',').map(n => n.trim());
                 const amountPerNumber = item.amount || 0;
@@ -211,9 +214,11 @@ const getStoreStatistics = async (req, res) => {
               break;
 
             case 'kep':
-              // Sử dụng amount (số tiền cược thực tế) thay vì totalAmount
-              const kepBetAmount = item.amount || 0;
+              // Sử dụng totalAmount (số tiền khách trả) thay vì amount
+              const kepBetAmount = item.totalAmount || 0;
               stats.kepTotal += kepBetAmount;
+              // Cộng tổng tiền khách trả cho nhóm tổng/kép/đầu/đít/bộ
+              stats.tongKepDauDitBoTotal += betAmount;
               if (item.numbers) {
                 const numbers = item.numbers.split(',').map(n => n.trim());
                 const amountPerNumber = item.amount || 0;
@@ -224,9 +229,11 @@ const getStoreStatistics = async (req, res) => {
               break;
 
             case 'dau':
-              // Sử dụng amount (số tiền cược thực tế) thay vì totalAmount
-              const dauBetAmount = item.amount || 0;
+              // Sử dụng totalAmount (số tiền khách trả) thay vì amount
+              const dauBetAmount = item.totalAmount || 0;
               stats.dauTotal += dauBetAmount;
+              // Cộng tổng tiền khách trả cho nhóm tổng/kép/đầu/đít/bộ
+              stats.tongKepDauDitBoTotal += betAmount;
               if (item.numbers) {
                 const numbers = item.numbers.split(',').map(n => n.trim());
                 const amountPerNumber = item.amount || 0;
@@ -237,9 +244,11 @@ const getStoreStatistics = async (req, res) => {
               break;
 
             case 'dit':
-              // Sử dụng amount (số tiền cược thực tế) thay vì totalAmount
-              const ditBetAmount = item.amount || 0;
+              // Sử dụng totalAmount (số tiền khách trả) thay vì amount
+              const ditBetAmount = item.totalAmount || 0;
               stats.ditTotal += ditBetAmount;
+              // Cộng tổng tiền khách trả cho nhóm tổng/kép/đầu/đít/bộ
+              stats.tongKepDauDitBoTotal += betAmount;
               if (item.numbers) {
                 const numbers = item.numbers.split(',').map(n => n.trim());
                 const amountPerNumber = item.amount || 0;
@@ -250,9 +259,11 @@ const getStoreStatistics = async (req, res) => {
               break;
 
             case 'bo':
-              // Sử dụng amount (số tiền cược thực tế) thay vì totalAmount
-              const boBetAmount = item.amount || 0;
+              // Sử dụng totalAmount (số tiền khách trả) thay vì amount
+              const boBetAmount = item.totalAmount || 0;
               stats.boTotal += boBetAmount;
+              // Cộng tổng tiền khách trả cho nhóm tổng/kép/đầu/đít/bộ
+              stats.tongKepDauDitBoTotal += betAmount;
               if (item.numbers) {
                 const amountPerNumber = item.amount || 0;
                 stats.bo[item.numbers] = (stats.bo[item.numbers] || 0) + amountPerNumber;

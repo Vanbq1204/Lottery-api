@@ -10,6 +10,16 @@ const saveLotteryResult = async (req, res) => {
     const userId = user._id;
 
     console.log('Save lottery - User:', user.username, 'UserId:', userId);
+    console.log('Save lottery - Data:', { turnNum, openTime, results });
+
+    // Convert openTime to Date if it's a string, or use current time if null/undefined
+    let openTimeDate;
+    if (openTime) {
+      openTimeDate = typeof openTime === 'string' ? new Date(openTime) : openTime;
+    } else {
+      openTimeDate = new Date();
+    }
+    console.log('Save lottery - openTimeDate:', openTimeDate);
 
     // Get store info
     const store = await Store.findById(user.storeId);
@@ -25,7 +35,7 @@ const saveLotteryResult = async (req, res) => {
     
     if (existingResult) {
       // Update existing result
-      existingResult.openTime = openTime;
+      existingResult.openTime = openTimeDate;
       existingResult.results = results;
       existingResult.createdBy = userId;
       
@@ -40,7 +50,7 @@ const saveLotteryResult = async (req, res) => {
       // Create new result
       const newLotteryResult = new LotteryResult({
         turnNum,
-        openTime,
+        openTime: openTimeDate,
         results,
         createdBy: userId,
         storeId: user.storeId,

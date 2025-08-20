@@ -10,7 +10,7 @@ const app = express();
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
     ? [process.env.FRONTEND_URL, 'https://lottery-web-lemon.vercel.app']
-    : ['http://localhost:3000', 'http://localhost:3001'],
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003'],
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -53,7 +53,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Database connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/test';
+const MONGODB_URI = process.env.MONGODB_URI ? `${process.env.MONGODB_URI}lottery` : 'mongodb://localhost:27017/lottery';
 
 mongoose.connect(MONGODB_URI)
   .then(() => {

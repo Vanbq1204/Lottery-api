@@ -100,15 +100,16 @@ const getAdminTotalStatistics = async (req, res) => {
 
     // Initialize statistics
     const stats = {
-      totalRevenue: 0,
+      totalRevenue: 0, // Tổng tiền khách trả (tính theo totalAmount)
       lotoTotal: 0,
       '2sTotal': 0,
       '3sTotal': 0,
-      tongTotal: 0,
-      kepTotal: 0,
-      dauTotal: 0,
-      ditTotal: 0,
-      boTotal: 0,
+      tongTotal: 0, // Tổng tiền cược thực tế cho tổng
+      kepTotal: 0,  // Tổng tiền cược thực tế cho kép
+      dauTotal: 0,  // Tổng tiền cược thực tế cho đầu
+      ditTotal: 0,  // Tổng tiền cược thực tế cho đít
+      boTotal: 0,   // Tổng tiền cược thực tế cho bộ
+      tongKepDauDitBoTotal: 0, // Tổng tiền khách trả cho nhóm tổng/kép/đầu/đít/bộ
       xienTotal: 0,
       xienquayTotal: 0,
       loto: {},
@@ -131,6 +132,7 @@ const getAdminTotalStatistics = async (req, res) => {
         invoice.items.forEach(item => {
           const betType = item.betType.toLowerCase();
           const betAmount = item.totalAmount || 0;
+          // Tổng tiền khách trả - luôn tính theo totalAmount
           stats.totalRevenue += betAmount;
           
                     if (betType === 'loto') {
@@ -269,17 +271,21 @@ const getAdminTotalStatistics = async (req, res) => {
             }
           }
           else if (['tong', 'kep', 'dau', 'dit', 'bo'].includes(betType)) {
-            // Sử dụng amount (số tiền cược thực tế) thay vì totalAmount (số tiền khách trả)
+            // Sử dụng amount (số tiền cược thực tế) cho các dòng chi tiết
             const actualBetAmount = item.amount || 0;
+            const customerPaymentAmount = item.totalAmount || 0;
             
-            // Update totals for grouped bet types - sử dụng số tiền cược thực tế
+            // Update totals for grouped bet types - sử dụng số tiền khách trả
             switch(betType) {
-              case 'tong': stats.tongTotal += actualBetAmount; break;
-              case 'kep': stats.kepTotal += actualBetAmount; break;
-              case 'dau': stats.dauTotal += actualBetAmount; break;
-              case 'dit': stats.ditTotal += actualBetAmount; break;
-              case 'bo': stats.boTotal += actualBetAmount; break;
+              case 'tong': stats.tongTotal += customerPaymentAmount; break;
+              case 'kep': stats.kepTotal += customerPaymentAmount; break;
+              case 'dau': stats.dauTotal += customerPaymentAmount; break;
+              case 'dit': stats.ditTotal += customerPaymentAmount; break;
+              case 'bo': stats.boTotal += customerPaymentAmount; break;
             }
+            
+            // Cộng tổng tiền khách trả cho nhóm tổng/kép/đầu/đít/bộ
+            stats.tongKepDauDitBoTotal += customerPaymentAmount;
             
             // Grouped statistics (tong, kep, dau, dit, bo) - sử dụng số tiền cược thực tế
             const numbersKey = item.numbers;
@@ -327,6 +333,8 @@ const getAdminTotalStatistics = async (req, res) => {
     stats.lotoCalculationDetails = lotoCalculationDetails;
     stats.lotoCalculationString = lotoCalculationString;
     stats.totalLotoRevenue = totalLotoRevenue;
+
+
 
     res.json({
       success: true,
