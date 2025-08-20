@@ -53,7 +53,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Database connection
-const MONGODB_URI = process.env.MONGODB_URI ? `${process.env.MONGODB_URI}lottery` : 'mongodb://localhost:27017/lottery';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/lottery';
 
 mongoose.connect(MONGODB_URI)
   .then(() => {
