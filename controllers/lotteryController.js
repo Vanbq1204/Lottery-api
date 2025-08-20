@@ -5,7 +5,7 @@ const Store = require('../models/Store');
 // Save lottery result
 const saveLotteryResult = async (req, res) => {
   try {
-    const { turnNum, openTime, openNum, results } = req.body;
+    const { turnNum, openTime, results } = req.body;
     const user = req.user; // req.user is already the full user object from middleware
     const userId = user._id;
 
@@ -26,7 +26,6 @@ const saveLotteryResult = async (req, res) => {
     if (existingResult) {
       // Update existing result
       existingResult.openTime = openTime;
-      existingResult.openNum = openNum;
       existingResult.results = results;
       existingResult.createdBy = userId;
       
@@ -42,7 +41,6 @@ const saveLotteryResult = async (req, res) => {
       const newLotteryResult = new LotteryResult({
         turnNum,
         openTime,
-        openNum,
         results,
         createdBy: userId,
         storeId: user.storeId,
@@ -72,7 +70,7 @@ const getLotteryResults = async (req, res) => {
   try {
     const user = req.user; // req.user is already the full user object from middleware
     const userId = user._id;
-    const { page = 1, limit = 10, startDate, endDate } = req.query;
+    const { page = 1, limit = 10, startDate, endDate, date } = req.query;
 
     // Build query based on user role
     let query = {};
@@ -88,7 +86,12 @@ const getLotteryResults = async (req, res) => {
     }
 
     // Add date filter if provided
-    if (startDate || endDate) {
+    if (date) {
+      // Convert YYYY-MM-DD to DD/MM/YYYY format for turnNum
+      const [year, month, day] = date.split('-');
+      const turnNumFormat = `${day}/${month}/${year}`;
+      query.turnNum = turnNumFormat;
+    } else if (startDate || endDate) {
       query.openTime = {};
       if (startDate) query.openTime.$gte = new Date(startDate);
       if (endDate) query.openTime.$lte = new Date(endDate);

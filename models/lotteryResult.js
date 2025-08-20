@@ -11,10 +11,7 @@ const lotteryResultSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  openNum: {
-    type: String,
-    required: true
-  },
+  // openNum đã được loại bỏ vì không quan trọng
   results: {
     gdb: { type: String, default: '' }, // Giải đặc biệt
     g1: { type: String, default: '' },  // Giải nhất
