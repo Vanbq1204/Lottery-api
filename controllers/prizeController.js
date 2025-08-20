@@ -1231,20 +1231,17 @@ const calculate3sPrize = async (invoiceItem, lotteryResult, storeId) => {
 // Hàm tính thưởng cho một hóa đơn
 const calculateInvoicePrize = async (invoice, lotteryDate, inputDate) => {
   try {
-    // Tìm kết quả xổ số theo openTime thực tế
-    // Sử dụng openTime để tìm kết quả xổ số chính xác
-    const startOfDay = new Date(inputDate + 'T00:00:00+07:00');
-    const endOfDay = new Date(inputDate + 'T23:59:59.999+07:00');
+    // Tìm kết quả xổ số theo turnNum chính xác
+    // Chuyển đổi inputDate (YYYY-MM-DD) thành turnNum (DD/MM/YYYY)
+    const [year, month, day] = inputDate.split('-');
+    const turnNum = `${day}/${month}/${year}`;
     
     console.log(`[PRIZE DEBUG] Tìm kết quả xổ số cho ngày: ${inputDate}`);
-    console.log(`[PRIZE DEBUG] OpenTime range: ${startOfDay.toISOString()} - ${endOfDay.toISOString()}`);
+    console.log(`[PRIZE DEBUG] TurnNum: ${turnNum}`);
     
     const lotteryResult = await LotteryResult.findOne({
       storeId: invoice.storeId,
-      openTime: {
-        $gte: startOfDay,
-        $lte: endOfDay
-      }
+      turnNum: turnNum
     });
     
     if (!lotteryResult) {

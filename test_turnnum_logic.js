@@ -2,9 +2,9 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const axios = require('axios');
 
-const testFixedLogic = async () => {
+const testTurnNumLogic = async () => {
   try {
-    console.log('🧪 Test logic tính thưởng mới...\n');
+    console.log('🧪 Test logic tính thưởng theo turnNum...\n');
     
     // Test với ngày 19/8 (có kết quả xổ số)
     console.log('1️⃣ Test ngày 19/8 (có kết quả xổ số):');
@@ -55,4 +55,4 @@ const testFixedLogic = async () => {
   }
 };
 
-testFixedLogic(); 
+testTurnNumLogic(); 
