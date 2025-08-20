@@ -453,19 +453,15 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
     let bestMultiplier = 0;
     let bestBetType = '';
     let bestDescription = '';
+    let originalBetNumbers = betNumbers; // Lưu lại số gốc để hiển thị
 
     for (const combo of winningCombinations) {
       let multiplier = 0;
       let betType = '';
       let description = '';
 
-      if (combo.length === 2) {
-        // Xiên quay 2 số
-        multiplier = 12;
-        
-        betType = 'xienquay2';
-        description = 'Xiên quay 2 số';
-      } else if (combo.length === 3) {
+      // Chỉ xử lý xiên quay 3 và 4 con, không có xiên quay 2
+      if (combo.length === 3) {
         if (combo.matchCount === 3) {
           // Xiên quay 3 số - trúng cả 3 cặp
           const multiplierData = await getMultiplierByStore(storeId, 'xienquay3_full');
@@ -526,12 +522,12 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
       totalWinnings.push({
         betType: bestBetType,
         betTypeLabel: bestDescription,
-        numbers: bestCombination.combination.join(', '),
+        numbers: originalBetNumbers.join('-'), // Hiển thị toàn bộ số gốc
         betAmount: betAmount,
         winningCount: bestCombination.matchCount || bestCombination.length,
         multiplier: bestMultiplier,
         prizeAmount: winningAmount,
-        detailString: `${bestDescription}: ${betAmount}n x ${bestMultiplier} = ${winningAmount.toLocaleString('vi-VN')} đ`
+        detailString: `${originalBetNumbers.join('-')} ${betAmount}n x ${bestMultiplier} ${bestDescription}`
       });
       
       console.log(`[XIENQUAY DEBUG] ---> Xiên quay ${i + 1} trúng! Thưởng: ${winningAmount} VNĐ`);
