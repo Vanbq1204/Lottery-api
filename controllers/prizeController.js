@@ -1240,7 +1240,7 @@ const calculateInvoicePrize = async (invoice, lotteryDate, inputDate) => {
       storeId: invoice.storeId, // ✅ Thêm storeId để lấy đúng kết quả xổ số của store này
       openTime: {
         $gte: startOfDay,
-        $lt: endOfDay
+        $lte: endOfDay
       }
     });
     
