@@ -198,7 +198,9 @@ const getStoreStatistics = async (req, res) => {
               break;
 
             case 'tong':
-              stats.tongTotal += betAmount;
+              // Sử dụng amount (số tiền cược thực tế) thay vì totalAmount
+              const tongBetAmount = item.amount || 0;
+              stats.tongTotal += tongBetAmount;
               if (item.numbers) {
                 const numbers = item.numbers.split(',').map(n => n.trim());
                 const amountPerNumber = item.amount || 0;
@@ -209,7 +211,9 @@ const getStoreStatistics = async (req, res) => {
               break;
 
             case 'kep':
-              stats.kepTotal += betAmount;
+              // Sử dụng amount (số tiền cược thực tế) thay vì totalAmount
+              const kepBetAmount = item.amount || 0;
+              stats.kepTotal += kepBetAmount;
               if (item.numbers) {
                 const numbers = item.numbers.split(',').map(n => n.trim());
                 const amountPerNumber = item.amount || 0;
@@ -220,7 +224,9 @@ const getStoreStatistics = async (req, res) => {
               break;
 
             case 'dau':
-              stats.dauTotal += betAmount;
+              // Sử dụng amount (số tiền cược thực tế) thay vì totalAmount
+              const dauBetAmount = item.amount || 0;
+              stats.dauTotal += dauBetAmount;
               if (item.numbers) {
                 const numbers = item.numbers.split(',').map(n => n.trim());
                 const amountPerNumber = item.amount || 0;
@@ -231,7 +237,9 @@ const getStoreStatistics = async (req, res) => {
               break;
 
             case 'dit':
-              stats.ditTotal += betAmount;
+              // Sử dụng amount (số tiền cược thực tế) thay vì totalAmount
+              const ditBetAmount = item.amount || 0;
+              stats.ditTotal += ditBetAmount;
               if (item.numbers) {
                 const numbers = item.numbers.split(',').map(n => n.trim());
                 const amountPerNumber = item.amount || 0;
@@ -242,7 +250,9 @@ const getStoreStatistics = async (req, res) => {
               break;
 
             case 'bo':
-              stats.boTotal += betAmount;
+              // Sử dụng amount (số tiền cược thực tế) thay vì totalAmount
+              const boBetAmount = item.amount || 0;
+              stats.boTotal += boBetAmount;
               if (item.numbers) {
                 const amountPerNumber = item.amount || 0;
                 stats.bo[item.numbers] = (stats.bo[item.numbers] || 0) + amountPerNumber;

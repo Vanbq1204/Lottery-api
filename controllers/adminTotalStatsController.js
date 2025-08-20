@@ -269,16 +269,19 @@ const getAdminTotalStatistics = async (req, res) => {
             }
           }
           else if (['tong', 'kep', 'dau', 'dit', 'bo'].includes(betType)) {
-            // Update totals for grouped bet types
+            // Sử dụng amount (số tiền cược thực tế) thay vì totalAmount (số tiền khách trả)
+            const actualBetAmount = item.amount || 0;
+            
+            // Update totals for grouped bet types - sử dụng số tiền cược thực tế
             switch(betType) {
-              case 'tong': stats.tongTotal += betAmount; break;
-              case 'kep': stats.kepTotal += betAmount; break;
-              case 'dau': stats.dauTotal += betAmount; break;
-              case 'dit': stats.ditTotal += betAmount; break;
-              case 'bo': stats.boTotal += betAmount; break;
+              case 'tong': stats.tongTotal += actualBetAmount; break;
+              case 'kep': stats.kepTotal += actualBetAmount; break;
+              case 'dau': stats.dauTotal += actualBetAmount; break;
+              case 'dit': stats.ditTotal += actualBetAmount; break;
+              case 'bo': stats.boTotal += actualBetAmount; break;
             }
             
-            // Grouped statistics (tong, kep, dau, dit, bo)
+            // Grouped statistics (tong, kep, dau, dit, bo) - sử dụng số tiền cược thực tế
             const numbersKey = item.numbers;
             if (!stats.grouped[betType][numbersKey]) {
               stats.grouped[betType][numbersKey] = {
@@ -287,7 +290,7 @@ const getAdminTotalStatistics = async (req, res) => {
               };
             }
             
-            stats.grouped[betType][numbersKey].totalAmount += betAmount;
+            stats.grouped[betType][numbersKey].totalAmount += actualBetAmount;
             stats.grouped[betType][numbersKey].detailString = `${numbersKey}: ${stats.grouped[betType][numbersKey].totalAmount}n`;
           }
         });
