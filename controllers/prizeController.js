@@ -462,6 +462,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
       if (combo.length === 2) {
         // Xiên quay 2 số
         multiplier = 12;
+        
         betType = 'xienquay2';
         description = 'Xiên quay 2 số';
       } else if (combo.length === 3) {
@@ -1230,14 +1231,16 @@ const calculate3sPrize = async (invoiceItem, lotteryResult, storeId) => {
 // Hàm tính thưởng cho một hóa đơn
 const calculateInvoicePrize = async (invoice, lotteryDate, inputDate) => {
   try {
-    // Tìm kết quả xổ số theo ngày
-    const startOfDay = new Date(lotteryDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(lotteryDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Tìm kết quả xổ số theo openTime thực tế
+    // Sử dụng openTime để tìm kết quả xổ số chính xác
+    const startOfDay = new Date(inputDate + 'T00:00:00+07:00');
+    const endOfDay = new Date(inputDate + 'T23:59:59.999+07:00');
+    
+    console.log(`[PRIZE DEBUG] Tìm kết quả xổ số cho ngày: ${inputDate}`);
+    console.log(`[PRIZE DEBUG] OpenTime range: ${startOfDay.toISOString()} - ${endOfDay.toISOString()}`);
     
     const lotteryResult = await LotteryResult.findOne({
-      storeId: invoice.storeId, // ✅ Thêm storeId để lấy đúng kết quả xổ số của store này
+      storeId: invoice.storeId,
       openTime: {
         $gte: startOfDay,
         $lte: endOfDay
