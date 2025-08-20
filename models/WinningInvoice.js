@@ -7,10 +7,10 @@ const winningItemSchema = new mongoose.Schema({
     enum: [
       'loto', '2s', '3s', 'tong', 'kep', 'dau', 'dit', 'bo', 'xien', 'xienquay',
       // Xiên quay
-      'xienquay3', 'xienquay4', 'xienquay3_full', 'xienquay3_2con', 'xienquay4_full', 'xienquay4_3con', 'xienquay4_2con',
+      'xienquay2', 'xienquay3', 'xienquay4', 'xienquay3_full', 'xienquay3_2con', 'xienquay4_full', 'xienquay4_3con', 'xienquay4_2con',
       // Xiên
-      'xien2_full', 'xien2_1hit', 'xien3_full', 'xien3_2hit_both', 'xien3_2hit_one', 
-      'xien4_full', 'xien4_3hit_all', 'xien4_3hit_two', 'xien4_3hit_one',
+      'xien2', 'xien2_full', 'xien2_1hit', 'xien3', 'xien3_full', 'xien3_2hit_both', 'xien3_2hit_one', 
+      'xien4', 'xien4_full', 'xien4_3hit_all', 'xien4_3hit_two', 'xien4_3hit_one',
       // 3 số cụ thể
       '3s_gdb_g1', '3s_gdb', '3s_gdb2_g1', '3s_g1', '3s_g6', '3s_2digits_gdb'
     ]
