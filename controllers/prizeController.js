@@ -448,61 +448,74 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
       continue;
     }
 
-    // Tìm tổ hợp trúng cao nhất dựa trên số con gốc
+    // Tìm tổ hợp trúng cao nhất
+    let bestCombination = null;
     let bestMultiplier = 0;
     let bestBetType = '';
-    let bestMatchCount = 0;
+    let bestDescription = '';
 
-    // Dựa trên số con gốc (n) để xác định loại xiên quay
-    if (n === 3) {
-      // Xiên quay 3 con
-      const matchCount = winningCombinations.reduce((max, combo) => Math.max(max, combo.matchCount), 0);
-      
-      if (matchCount === 3) {
-        // Trúng cả 3 con
-        const multiplierData = await getMultiplierByStore(storeId, 'xienquay3_full');
-        if (multiplierData) {
-          bestMultiplier = multiplierData.multiplier;
-          bestBetType = 'xienquay3_full';
-          bestMatchCount = 3;
+    for (const combo of winningCombinations) {
+      let multiplier = 0;
+      let betType = '';
+      let description = '';
+
+      if (combo.length === 2) {
+        // Xiên quay 2 số
+        multiplier = 12;
+        
+        betType = 'xienquay2';
+        description = 'Xiên quay 2 số';
+      } else if (combo.length === 3) {
+        if (combo.matchCount === 3) {
+          // Xiên quay 3 số - trúng cả 3 cặp
+          const multiplierData = await getMultiplierByStore(storeId, 'xienquay3_full');
+          if (multiplierData) {
+            multiplier = multiplierData.multiplier;
+            betType = 'xienquay3_full';
+            description = 'Xiên quay 3 - Trúng cả 3 con';
+          }
+        } else if (combo.matchCount === 2) {
+          // Xiên quay 3 số - trúng 2 cặp
+          const multiplierData = await getMultiplierByStore(storeId, 'xienquay3_2con');
+          if (multiplierData) {
+            multiplier = multiplierData.multiplier;
+            betType = 'xienquay3_2con';
+            description = 'Xiên quay 3 - Trúng 2 con';
+          }
         }
-      } else if (matchCount === 2) {
-        // Trúng 2 con
-        const multiplierData = await getMultiplierByStore(storeId, 'xienquay3_2con');
-        if (multiplierData) {
-          bestMultiplier = multiplierData.multiplier;
-          bestBetType = 'xienquay3_2con';
-          bestMatchCount = 2;
+      } else if (combo.length === 4) {
+        if (combo.matchCount === 4) {
+          // Xiên quay 4 số - trúng cả 4 cặp
+          const multiplierData = await getMultiplierByStore(storeId, 'xienquay4_full');
+          if (multiplierData) {
+            multiplier = multiplierData.multiplier;
+            betType = 'xienquay4_full';
+            description = 'Xiên quay 4 - Trúng cả 4 con';
+          }
+        } else if (combo.matchCount === 3) {
+          // Xiên quay 4 số - trúng 3 cặp
+          const multiplierData = await getMultiplierByStore(storeId, 'xienquay4_3con');
+          if (multiplierData) {
+            multiplier = multiplierData.multiplier;
+            betType = 'xienquay4_3con';
+            description = 'Xiên quay 4 - Trúng 3 con';
+          }
+        } else if (combo.matchCount === 2) {
+          // Xiên quay 4 số - trúng 2 cặp
+          const multiplierData = await getMultiplierByStore(storeId, 'xienquay4_2con');
+          if (multiplierData) {
+            multiplier = multiplierData.multiplier;
+            betType = 'xienquay4_2con';
+            description = 'Xiên quay 4 - Trúng 2 con';
+          }
         }
       }
-    } else if (n === 4) {
-      // Xiên quay 4 con
-      const matchCount = winningCombinations.reduce((max, combo) => Math.max(max, combo.matchCount), 0);
-      
-      if (matchCount === 4) {
-        // Trúng cả 4 con
-        const multiplierData = await getMultiplierByStore(storeId, 'xienquay4_full');
-        if (multiplierData) {
-          bestMultiplier = multiplierData.multiplier;
-          bestBetType = 'xienquay4_full';
-          bestMatchCount = 4;
-        }
-      } else if (matchCount === 3) {
-        // Trúng 3 con
-        const multiplierData = await getMultiplierByStore(storeId, 'xienquay4_3con');
-        if (multiplierData) {
-          bestMultiplier = multiplierData.multiplier;
-          bestBetType = 'xienquay4_3con';
-          bestMatchCount = 3;
-        }
-      } else if (matchCount === 2) {
-        // Trúng 2 con
-        const multiplierData = await getMultiplierByStore(storeId, 'xienquay4_2con');
-        if (multiplierData) {
-          bestMultiplier = multiplierData.multiplier;
-          bestBetType = 'xienquay4_2con';
-          bestMatchCount = 2;
-        }
+
+      if (multiplier > bestMultiplier) {
+        bestMultiplier = multiplier;
+        bestCombination = combo;
+        bestBetType = betType;
+        bestDescription = description;
       }
     }
 
@@ -510,19 +523,15 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
       const winningAmount = betAmount * bestMultiplier * 1000;
       totalPrizeAmount += winningAmount;
       
-      // Hiển thị đúng: Xiên quay N con - trúng X con
-      const originalNumbers = betNumbers.join('-'); // Con gốc
-      const correctDescription = `Xiên quay ${n} - Trúng ${bestMatchCount} con`;
-      
       totalWinnings.push({
         betType: bestBetType,
-        betTypeLabel: correctDescription,
-        numbers: originalNumbers, // Hiển thị con gốc, không phải con trúng
+        betTypeLabel: bestDescription,
+        numbers: bestCombination.combination.join(', '),
         betAmount: betAmount,
-        winningCount: bestMatchCount,
+        winningCount: bestCombination.matchCount || bestCombination.length,
         multiplier: bestMultiplier,
         prizeAmount: winningAmount,
-        detailString: `${originalNumbers} ${betAmount}n x ${bestMultiplier} ${correctDescription}`
+        detailString: `${bestDescription}: ${betAmount}n x ${bestMultiplier} = ${winningAmount.toLocaleString('vi-VN')} đ`
       });
       
       console.log(`[XIENQUAY DEBUG] ---> Xiên quay ${i + 1} trúng! Thưởng: ${winningAmount} VNĐ`);
