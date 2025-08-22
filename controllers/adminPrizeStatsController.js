@@ -236,7 +236,7 @@ const getAdminPrizeStatistics = async (req, res) => {
                 statistics.loto.winningNumbers[num].totalPoints += totalPoints;
                 statistics.loto.winningNumbers[num].totalPrize += (totalPoints * multiplier * 1000);
                 
-                console.log(`🔍 Loto ${num}: hitCount=${actualHitCount}, totalPoints=${statistics.loto.winningNumbers[num].totalPoints}, prize=${statistics.loto.winningNumbers[num].totalPrize}`);
+
               });
             }
             
@@ -431,6 +431,11 @@ const getAdminPrizeStatistics = async (req, res) => {
     // Tính lại tổng thưởng 2 số sau khi đã phân tích tất cả items
     statistics['2s'].totalPrize = Object.values(statistics['2s'].winningNumbers).reduce((sum, data) => {
       return sum + data.totalPrize;
+    }, 0);
+
+    // Tính tổng điểm cho loto sau khi đã phân tích tất cả items
+    statistics.loto.totalPoints = Object.values(statistics.loto.winningNumbers).reduce((sum, data) => {
+      return sum + (data.totalPoints || 0);
     }, 0);
 
     console.log('📊 Statistics summary:', {

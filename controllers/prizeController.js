@@ -1521,7 +1521,7 @@ const updatePrizeMultiplier = async (req, res) => {
     const { betType, subType, multiplier, description } = req.body;
     const user = req.user;
     
-    if (!betType || !multiplier) {
+    if (!betType || multiplier === undefined || multiplier === null) {
       return res.status(400).json({ message: 'Thiếu thông tin bắt buộc' });
     }
     
