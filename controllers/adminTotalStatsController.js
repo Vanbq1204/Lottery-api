@@ -240,17 +240,18 @@ const getAdminTotalStatistics = async (req, res) => {
           }
           else if (betType.includes('xienquay')) {
             stats.xienquayTotal += betAmount;
-            // Xien Quay statistics - tách từng con số
+            // Xien Quay statistics - sử dụng amount (tiền cược của từng con) thay vì chia tổng tiền
             const caseType = item.betType;
             if (!stats.xienquay[caseType]) {
               stats.xienquay[caseType] = {};
             }
             
-                        // Tách từng tổ hợp xiên quay riêng biệt
+            // Sử dụng amount (tiền cược của từng con) nếu có, nếu không thì chia tổng tiền
+            const amountPerNumber = item.amount || Math.floor(betAmount / (item.numbers ? item.numbers.split(',').length : 1));
+            
             if (item.numbers) {
               // Tách theo dấu phẩy trước để tách các tổ hợp riêng biệt
               const combinations = item.numbers.split(',').map(combo => combo.trim()).filter(combo => combo.length > 0);
-              const betAmountPerCombination = Math.floor(betAmount / combinations.length); // Chia đều cho từng tổ hợp
               
               combinations.forEach(combination => {
                 // Tách từng tổ hợp thành các số (ví dụ: "12-33-44" -> ["12", "33", "44"])
@@ -265,7 +266,7 @@ const getAdminTotalStatistics = async (req, res) => {
                   };
                 }
                 
-                stats.xienquay[caseType][numbersKey].totalAmount += betAmountPerCombination;
+                stats.xienquay[caseType][numbersKey].totalAmount += amountPerNumber;
                 stats.xienquay[caseType][numbersKey].count = (stats.xienquay[caseType][numbersKey].count || 0) + 1;
               });
             }

@@ -464,7 +464,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
         multiplier = 12;
         
         betType = 'xienquay2';
-        description = 'Xiên quay 2 số';
+        description = `Xiên quay ${betNumbers.length} số trúng 2 con`;
       } else if (combo.length === 3) {
         if (combo.matchCount === 3) {
           // Xiên quay 3 số - trúng cả 3 cặp
@@ -472,7 +472,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
           if (multiplierData) {
             multiplier = multiplierData.multiplier;
             betType = 'xienquay3_full';
-            description = 'Xiên quay 3 - Trúng cả 3 con';
+            description = `Xiên quay ${betNumbers.length} - Trúng cả 3 con`;
           }
         } else if (combo.matchCount === 2) {
           // Xiên quay 3 số - trúng 2 cặp
@@ -480,7 +480,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
           if (multiplierData) {
             multiplier = multiplierData.multiplier;
             betType = 'xienquay3_2con';
-            description = 'Xiên quay 3 - Trúng 2 con';
+            description = `Xiên quay ${betNumbers.length} - Trúng 2 con`;
           }
         }
       } else if (combo.length === 4) {
@@ -490,7 +490,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
           if (multiplierData) {
             multiplier = multiplierData.multiplier;
             betType = 'xienquay4_full';
-            description = 'Xiên quay 4 - Trúng cả 4 con';
+            description = `Xiên quay ${betNumbers.length} - Trúng cả 4 con`;
           }
         } else if (combo.matchCount === 3) {
           // Xiên quay 4 số - trúng 3 cặp
@@ -498,7 +498,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
           if (multiplierData) {
             multiplier = multiplierData.multiplier;
             betType = 'xienquay4_3con';
-            description = 'Xiên quay 4 - Trúng 3 con';
+            description = `Xiên quay ${betNumbers.length} - Trúng 3 con`;
           }
         } else if (combo.matchCount === 2) {
           // Xiên quay 4 số - trúng 2 cặp
@@ -506,7 +506,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
           if (multiplierData) {
             multiplier = multiplierData.multiplier;
             betType = 'xienquay4_2con';
-            description = 'Xiên quay 4 - Trúng 2 con';
+            description = `Xiên quay ${betNumbers.length} - Trúng 2 con`;
           }
         }
       }
@@ -526,7 +526,8 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
       totalWinnings.push({
         betType: bestBetType,
         betTypeLabel: bestDescription,
-        numbers: bestCombination.combination.join(', '),
+        numbers: xienquayString, // Lưu tất cả số đã đánh ban đầu
+        winningNumbers: bestCombination.combination.join(', '), // Lưu các số trúng thưởng
         betAmount: betAmount,
         winningCount: bestCombination.matchCount || bestCombination.length,
         multiplier: bestMultiplier,
