@@ -70,9 +70,10 @@ const getPrizeStatistics = async (req, res) => {
       const [year, month, day] = date.split('-');
       const turnNum = `${day}/${month}/${year}`;
       
+      // Lấy kết quả xổ số global (không phụ thuộc store)
       const lotteryResult = await LotteryResult.findOne({
-        turnNum: turnNum,
-        storeId: user.storeId
+        turnNum: turnNum
+        // Loại bỏ storeId filter - tất cả store sử dụng chung kết quả
       });
       
       if (lotteryResult) {

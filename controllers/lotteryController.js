@@ -21,17 +21,8 @@ const saveLotteryResult = async (req, res) => {
     }
     console.log('Save lottery - openTimeDate:', openTimeDate);
 
-    // Get store info
-    const store = await Store.findById(user.storeId);
-    if (!store) {
-      return res.status(404).json({ success: false, message: 'Cửa hàng không tồn tại' });
-    }
-
-    // Check if lottery result already exists for this turnNum + storeId
-    const existingResult = await LotteryResult.findOne({ 
-      turnNum, 
-      storeId: user.storeId 
-    });
+    // Check if lottery result already exists for this turnNum (global, không phụ thuộc store)
+    const existingResult = await LotteryResult.findOne({ turnNum });
     
     if (existingResult) {
       // Update existing result
@@ -52,9 +43,8 @@ const saveLotteryResult = async (req, res) => {
         turnNum,
         openTime: openTimeDate,
         results,
-        createdBy: userId,
-        storeId: user.storeId,
-        adminId: store.adminId
+        createdBy: userId
+        // Loại bỏ storeId và adminId - tất cả store sử dụng chung kết quả
       });
 
       await newLotteryResult.save();
@@ -82,19 +72,9 @@ const getLotteryResults = async (req, res) => {
     const userId = user._id;
     const { page = 1, limit = 10, startDate, endDate, date } = req.query;
 
-    // Build query based on user role
+    // Build query - không cần filter theo storeId nữa
     let query = {};
     
-    if (user.role === 'admin') {
-      // Admin can see all results from their stores
-      const stores = await Store.find({ adminId: userId });
-      const storeIds = stores.map(store => store._id);
-      query.storeId = { $in: storeIds };
-    } else {
-      // Employee can only see results from their store
-      query.storeId = user.storeId;
-    }
-
     // Add date filter if provided
     if (date) {
       // Convert YYYY-MM-DD to DD/MM/YYYY format for turnNum
@@ -111,7 +91,6 @@ const getLotteryResults = async (req, res) => {
     
     const lotteryResults = await LotteryResult.find(query)
       .populate('createdBy', 'name username')
-      .populate('storeId', 'name address')
       .sort({ openTime: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -134,7 +113,7 @@ const getLotteryResults = async (req, res) => {
     console.error('Get lottery results error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Lỗi server khi lấy kết quả xổ số',
+      message: 'Lỗi server khi lấy danh sách kết quả xổ số',
       error: error.message
     });
   }
@@ -147,23 +126,11 @@ const getLotteryResultById = async (req, res) => {
     const user = req.user; // req.user is already the full user object from middleware
     const userId = user._id;
 
-    // Build query based on user role
-    let query = { turnNum };
-    
-    if (user.role === 'admin') {
-      // Admin can see results from their stores
-      const stores = await Store.find({ adminId: userId });
-      const storeIds = stores.map(store => store._id);
-      query.storeId = { $in: storeIds };
-    } else {
-      // Employee can only see results from their store
-      query.storeId = user.storeId;
-    }
+    // Query chỉ dựa vào turnNum - không cần filter theo store
+    const query = { turnNum };
 
     const lotteryResult = await LotteryResult.findOne(query)
-      .populate('createdBy', 'name username')
-      .populate('storeId', 'name address')
-      .populate('adminId', 'name email');
+      .populate('createdBy', 'name username');
 
     if (!lotteryResult) {
       return res.status(404).json({
@@ -190,23 +157,17 @@ const getLotteryResultById = async (req, res) => {
 const deleteLotteryResult = async (req, res) => {
   try {
     const { turnNum } = req.params;
-    const user = req.user; // req.user is already the full user object from middleware
-    const userId = user._id;
+    const user = req.user;
 
-    // Build query based on user role
-    let query = { turnNum };
-    
-    if (user.role === 'admin') {
-      // Admin can delete results from their stores
-      const stores = await Store.find({ adminId: userId });
-      const storeIds = stores.map(store => store._id);
-      query.storeId = { $in: storeIds };
-    } else {
-      // Employee can only delete results from their store
-      query.storeId = user.storeId;
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin mới có quyền xóa kết quả xổ số'
+      });
     }
 
-    const lotteryResult = await LotteryResult.findOneAndDelete(query);
+    const lotteryResult = await LotteryResult.findOneAndDelete({ turnNum });
 
     if (!lotteryResult) {
       return res.status(404).json({

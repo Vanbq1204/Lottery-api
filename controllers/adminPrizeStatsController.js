@@ -118,20 +118,19 @@ const getAdminPrizeStatistics = async (req, res) => {
       const [year, month, day] = date.split('-');
       const turnNum = `${day}/${month}/${year}`;
       
-      // Get lottery results for all stores (since they might have different results)
+      // Lấy kết quả xổ số global (không phụ thuộc store)
       const lotteryResultsQuery = await LotteryResult.find({
-        turnNum: turnNum,
-        storeId: { $in: storeIds }
+        turnNum: turnNum
+        // Loại bỏ storeId filter - tất cả store sử dụng chung kết quả
       });
       
       console.log('🎲 Found lottery results:', { 
         turnNum, 
-        count: lotteryResultsQuery.length,
-        storeIds: lotteryResultsQuery.map(r => r.storeId.toString())
+        count: lotteryResultsQuery.length
       });
       
       if (lotteryResultsQuery.length > 0) {
-        // Use the first lottery result to extract loto numbers (assuming same KQXS for all stores)
+        // Use the first lottery result to extract loto numbers (global KQXS)
         lotoNumbersFromKQXS = extractLotoNumbers(lotteryResultsQuery[0]);
         console.log('🎯 Loto numbers from KQXS:', lotoNumbersFromKQXS);
       }

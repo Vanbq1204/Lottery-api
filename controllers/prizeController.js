@@ -1059,7 +1059,12 @@ const calculateBoPrize = async (invoiceItem, lotteryResult, storeId) => {
     '96': ['96', '69', '91', '19', '46', '64', '41', '14'],
     '97': ['97', '79', '92', '29', '47', '74', '42', '24'],
     '98': ['98', '89', '93', '39', '48', '84', '43', '34'],
-    '99': ['99', '94', '49', '44']
+    '99': ['99', '94', '49', '44'],
+    // Các bộ chẵn lẻ
+    'chanle': ['01', '03', '05', '07', '09', '21', '23', '25', '27', '29', '41', '43', '45', '47', '49', '61', '63', '65', '67', '69', '81', '83', '85', '87', '89'],
+    'lechan': ['10', '12', '14', '16', '18', '30', '32', '34', '36', '38', '50', '52', '54', '56', '58', '70', '72', '74', '76', '78', '90', '92', '94', '96', '98'],
+    'lele': ['11', '13', '15', '17', '19', '31', '33', '35', '37', '39', '51', '53', '55', '57', '59', '71', '73', '75', '77', '79', '91', '93', '95', '97', '99'],
+    'chanchan': ['00', '02', '04', '06', '08', '20', '22', '24', '26', '28', '40', '42', '44', '46', '48', '60', '62', '64', '66', '68', '80', '82', '84', '86', '88']
   };
   
   const prizeMultiplier = await getMultiplierByStore(storeId, 'bo');
@@ -1076,10 +1081,22 @@ const calculateBoPrize = async (invoiceItem, lotteryResult, storeId) => {
     betAmount = parseInt(invoiceItem.amount) || 0;
     console.log(`[PRIZE DEBUG] ---> Dữ liệu bộ: "${invoiceItem.numbers}" với ${betAmount} VNĐ`);
     
-    // Parse "Bộ 12" to get boName "12"
+    // Parse "Bộ 12" hoặc "Bộ chanle" để lấy tên bộ
+    let boName = null;
+    
+    // Thử parse bộ số thường (Bộ 12)
     const boMatch = invoiceItem.numbers.match(/Bộ (\d+)/);
     if (boMatch) {
-      const boName = boMatch[1].padStart(2, '0');
+      boName = boMatch[1].padStart(2, '0');
+    } else {
+      // Thử parse bộ chẵn lẻ (Bộ chanle, lechan, lele, chanchan)
+      const boChanLeMatch = invoiceItem.numbers.match(/Bộ (chanle|lechan|lele|chanchan)/);
+      if (boChanLeMatch) {
+        boName = boChanLeMatch[1];
+      }
+    }
+    
+    if (boName) {
       console.log(`[PRIZE DEBUG] ---> Parsed bộ: ${boName}`);
       
       if (BO_DATA[boName] && BO_DATA[boName].includes(lastTwoDigits)) {
@@ -1241,8 +1258,8 @@ const calculateInvoicePrize = async (invoice, lotteryDate, inputDate) => {
     console.log(`[PRIZE DEBUG] TurnNum: ${turnNum}`);
     
     const lotteryResult = await LotteryResult.findOne({
-      storeId: invoice.storeId,
       turnNum: turnNum
+      // Loại bỏ storeId filter - tất cả store sử dụng chung kết quả
     });
     
     if (!lotteryResult) {
