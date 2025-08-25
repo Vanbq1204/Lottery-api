@@ -421,17 +421,18 @@ const getInvoiceStats = async (req, res) => {
             stats.boTotal += amount;
             // Process bo numbers and amounts
             if (item.numbers && item.amount) {
-              // Extract bo number from "Bộ 12" format
-              const boMatch = item.numbers.match(/Bộ (\d+)/);
-              if (boMatch) {
-                const boNumber = boMatch[1].padStart(2, '0');
-                const betAmount = parseInt(item.amount) || 0;
-                
+              // Với cấu trúc mới, item.numbers chứa tên bộ (ví dụ: "05 06 07")
+              const boNumbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+              const betAmount = parseInt(item.amount) || 0;
+              
+              boNumbers.forEach(boName => {
+                // Đảm bảo format 2 chữ số
+                const boNumber = boName.padStart(2, '0');
                 if (!stats.bo[boNumber]) {
                   stats.bo[boNumber] = 0;
                 }
                 stats.bo[boNumber] += betAmount;
-              }
+              });
             }
             break;
           case 'xien':

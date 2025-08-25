@@ -1081,44 +1081,32 @@ const calculateBoPrize = async (invoiceItem, lotteryResult, storeId) => {
     betAmount = parseInt(invoiceItem.amount) || 0;
     console.log(`[PRIZE DEBUG] ---> Dữ liệu bộ: "${invoiceItem.numbers}" với ${betAmount} VNĐ`);
     
-    // Parse "Bộ 12" hoặc "Bộ chanle" để lấy tên bộ
-    let boName = null;
+    // Với cấu trúc mới, item.numbers chứa tên bộ (ví dụ: "05 06 07")
+    const boNumbers = invoiceItem.numbers.split(/[\s,]+/).filter(n => n.length > 0);
     
-    // Thử parse bộ số thường (Bộ 12)
-    const boMatch = invoiceItem.numbers.match(/Bộ (\d+)/);
-    if (boMatch) {
-      boName = boMatch[1].padStart(2, '0');
-    } else {
-      // Thử parse bộ chẵn lẻ (Bộ chanle, lechan, lele, chanchan)
-      const boChanLeMatch = invoiceItem.numbers.match(/Bộ (chanle|lechan|lele|chanchan)/);
-      if (boChanLeMatch) {
-        boName = boChanLeMatch[1];
-      }
-    }
-    
-    if (boName) {
-      console.log(`[PRIZE DEBUG] ---> Parsed bộ: ${boName}`);
+    boNumbers.forEach(boName => {
+      // Đảm bảo format 2 chữ số cho bộ số
+      const paddedBoName = boName.padStart(2, '0');
+      console.log(`[PRIZE DEBUG] ---> Kiểm tra bộ: ${paddedBoName}`);
       
-      if (BO_DATA[boName] && BO_DATA[boName].includes(lastTwoDigits)) {
+      if (BO_DATA[paddedBoName] && BO_DATA[paddedBoName].includes(lastTwoDigits)) {
         const winningAmount = betAmount * prizeMultiplier.multiplier * 1000;
         totalWinningAmount += winningAmount;
         winningDetails.push({
-          bo: boName,
+          bo: paddedBoName,
           betAmount: betAmount,
           winningAmount: winningAmount
         });
-        console.log(`[PRIZE DEBUG] -----> Bộ ${boName} trúng! Thưởng: ${winningAmount} VNĐ`);
-        console.log(`[PRIZE DEBUG] -----> Bộ ${boName} chứa các số: [${BO_DATA[boName].join(', ')}]`);
+        console.log(`[PRIZE DEBUG] -----> Bộ ${paddedBoName} trúng! Thưởng: ${winningAmount} VNĐ`);
+        console.log(`[PRIZE DEBUG] -----> Bộ ${paddedBoName} chứa các số: [${BO_DATA[paddedBoName].join(', ')}]`);
         console.log(`[PRIZE DEBUG] -----> Đề về: ${lastTwoDigits} có trong bộ!`);
       } else {
-        console.log(`[PRIZE DEBUG] -----> Bộ ${boName} không trúng`);
-        if (BO_DATA[boName]) {
-          console.log(`[PRIZE DEBUG] -----> Bộ ${boName} chứa: [${BO_DATA[boName].join(', ')}], đề về: ${lastTwoDigits}`);
+        console.log(`[PRIZE DEBUG] -----> Bộ ${paddedBoName} không trúng`);
+        if (BO_DATA[paddedBoName]) {
+          console.log(`[PRIZE DEBUG] -----> Bộ ${paddedBoName} chứa: [${BO_DATA[paddedBoName].join(', ')}], đề về: ${lastTwoDigits}`);
         }
       }
-    } else {
-      console.log(`[PRIZE DEBUG] -----> Không parse được bộ từ: "${invoiceItem.numbers}"`);
-    }
+    });
   }
   
   if (totalWinningAmount > 0) {
@@ -1697,4 +1685,4 @@ module.exports = {
   calculate3sPrize,
   calculateXienQuayPrize,
   calculateXienPrize
-}; 
+};

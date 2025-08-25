@@ -289,16 +289,34 @@ const getAdminTotalStatistics = async (req, res) => {
             stats.tongKepDauDitBoTotal += customerPaymentAmount;
             
             // Grouped statistics (tong, kep, dau, dit, bo) - sử dụng số tiền cược thực tế
-            const numbersKey = item.numbers;
-            if (!stats.grouped[betType][numbersKey]) {
-              stats.grouped[betType][numbersKey] = {
-                totalAmount: 0,
-                detailString: `${numbersKey}: `
-              };
+            if (betType === 'bo') {
+              // Với bộ, tách từng bộ thành item riêng biệt
+              const boNumbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+              boNumbers.forEach(boName => {
+                const boNumber = boName.padStart(2, '0');
+                if (!stats.grouped[betType][boNumber]) {
+                  stats.grouped[betType][boNumber] = {
+                    totalAmount: 0,
+                    detailString: `Bộ ${boNumber}: `
+                  };
+                }
+                
+                stats.grouped[betType][boNumber].totalAmount += actualBetAmount;
+                stats.grouped[betType][boNumber].detailString = `Bộ ${boNumber}: ${stats.grouped[betType][boNumber].totalAmount}n`;
+              });
+            } else {
+              // Các loại khác giữ nguyên
+              const numbersKey = item.numbers;
+              if (!stats.grouped[betType][numbersKey]) {
+                stats.grouped[betType][numbersKey] = {
+                  totalAmount: 0,
+                  detailString: `${numbersKey}: `
+                };
+              }
+              
+              stats.grouped[betType][numbersKey].totalAmount += actualBetAmount;
+              stats.grouped[betType][numbersKey].detailString = `${numbersKey}: ${stats.grouped[betType][numbersKey].totalAmount}n`;
             }
-            
-            stats.grouped[betType][numbersKey].totalAmount += actualBetAmount;
-            stats.grouped[betType][numbersKey].detailString = `${numbersKey}: ${stats.grouped[betType][numbersKey].totalAmount}n`;
           }
         });
       }

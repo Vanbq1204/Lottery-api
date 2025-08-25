@@ -74,7 +74,7 @@ const getLotteryResults = async (req, res) => {
 
     // Build query - không cần filter theo storeId nữa
     let query = {};
-    
+
     // Add date filter if provided
     if (date) {
       // Convert YYYY-MM-DD to DD/MM/YYYY format for turnNum

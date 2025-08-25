@@ -412,7 +412,18 @@ const analyzeOtherItem = (item, otherStats) => {
   
   otherStats.cases[caseType].count += 1;
   otherStats.cases[caseType].totalPrize += item.prizeAmount;
-  otherStats.cases[caseType].numbers.push(item.numbers);
+  
+  // Xử lý đặc biệt cho bộ - tách từng bộ thành item riêng biệt
+  if (caseType === 'bo') {
+    const boNumbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+    boNumbers.forEach(boName => {
+      const boNumber = boName.padStart(2, '0');
+      otherStats.cases[caseType].numbers.push(boNumber);
+    });
+  } else {
+    otherStats.cases[caseType].numbers.push(item.numbers);
+  }
+  
   otherStats.cases[caseType].details.push({
     numbers: item.numbers,
     betAmount: item.betAmount,

@@ -265,8 +265,14 @@ const getStoreStatistics = async (req, res) => {
               // Cộng tổng tiền khách trả cho nhóm tổng/kép/đầu/đít/bộ
               stats.tongKepDauDitBoTotal += betAmount;
               if (item.numbers) {
+                // Với cấu trúc mới, item.numbers chứa tên bộ (ví dụ: "05 06 07")
+                const boNumbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
                 const amountPerNumber = item.amount || 0;
-                stats.bo[item.numbers] = (stats.bo[item.numbers] || 0) + amountPerNumber;
+                boNumbers.forEach(boName => {
+                  // Đảm bảo format 2 chữ số
+                  const boNumber = boName.padStart(2, '0');
+                  stats.bo[boNumber] = (stats.bo[boNumber] || 0) + amountPerNumber;
+                });
               }
               break;
 
