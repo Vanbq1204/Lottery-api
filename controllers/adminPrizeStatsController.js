@@ -1,4 +1,5 @@
 const WinningInvoice = require('../models/WinningInvoice');
+const Invoice = require('../models/Invoice');
 const Store = require('../models/Store');
 const User = require('../models/User');
 const LotteryResult = require('../models/lotteryResult');
@@ -68,6 +69,7 @@ const getAdminPrizeStatistics = async (req, res) => {
         success: true,
         message: 'Không có cửa hàng nào',
         totalInvoices: 0,
+        totalBettingInvoices: 0,
         totalPrizeAmount: 0,
         totalStores: 0,
         statistics: {
@@ -109,6 +111,14 @@ const getAdminPrizeStatistics = async (req, res) => {
 
     console.log('🎯 Found winning invoices:', { count: winningInvoices.length });
 
+    // Get total betting invoices from all stores managed by admin
+    const totalBettingInvoices = await Invoice.countDocuments({
+      storeId: { $in: storeIds },
+      ...dateFilter
+    });
+
+    console.log('📊 Total betting invoices:', { count: totalBettingInvoices });
+
     // Get lottery results for the date to calculate correct hit counts
     let lotteryResults = [];
     let lotoNumbersFromKQXS = [];
@@ -141,6 +151,7 @@ const getAdminPrizeStatistics = async (req, res) => {
         success: true,
         message: 'Không có dữ liệu thống kê thưởng',
         totalInvoices: 0,
+        totalBettingInvoices: totalBettingInvoices,
         totalPrizeAmount: 0,
         totalStores: storeIds.length,
         statistics: {
@@ -439,6 +450,7 @@ const getAdminPrizeStatistics = async (req, res) => {
 
     console.log('📊 Statistics summary:', {
       totalInvoices: winningInvoices.length,
+      totalBettingInvoices: totalBettingInvoices,
       totalPrizeAmount,
       totalStores: storeIds.length,
       lotoTotal: statistics.loto.totalPrize,
@@ -453,6 +465,7 @@ const getAdminPrizeStatistics = async (req, res) => {
       success: true,
       message: 'Lấy thống kê thưởng tổng hợp thành công',
       totalInvoices: winningInvoices.length,
+      totalBettingInvoices: totalBettingInvoices,
       totalPrizeAmount,
       totalStores: storeIds.length,
       statistics
