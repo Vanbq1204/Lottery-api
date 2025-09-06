@@ -762,6 +762,21 @@ const getHistoryByDate = async (req, res) => {
   }
 };
 
+const checkInvoiceExists = async (req, res) => {
+  try {
+    const { invoiceId } = req.params;
+    const existingInvoice = await Invoice.findOne({ invoiceId });
+    res.json({ exists: !!existingInvoice });
+  } catch (error) {
+    console.error('Check invoice existence error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi kiểm tra mã hóa đơn',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   saveInvoice,
   getInvoicesByStore,
@@ -771,5 +786,6 @@ module.exports = {
   editInvoice,
   deleteInvoice,
   getInvoiceHistory,
-  getHistoryByDate
-}; 
+  getHistoryByDate,
+  checkInvoiceExists
+};

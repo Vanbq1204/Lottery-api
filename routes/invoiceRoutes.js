@@ -11,7 +11,8 @@ const {
   editInvoice,
   deleteInvoice,
   getInvoiceHistory,
-  getHistoryByDate
+  getHistoryByDate,
+  checkInvoiceExists
 } = require('../controllers/invoiceController');
 
 // Lưu hóa đơn mới (chỉ employee) - có kiểm tra thời gian
@@ -41,4 +42,6 @@ router.get('/history', authenticateToken, getInvoiceHistory);
 // Lấy lịch sử theo ngày
 router.get('/history/:date', authenticateToken, getHistoryByDate);
 
-module.exports = router; 
+router.get('/check/:invoiceId', authenticateToken, checkInvoiceExists);
+
+module.exports = router;
