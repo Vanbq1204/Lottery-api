@@ -5,7 +5,7 @@ const winningItemSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: [
-      'loto', '2s', '3s', 'tong', 'kep', 'dau', 'dit', 'bo', 'xien', 'xienquay',
+      'loto', '2s', '3s', '4s', 'tong', 'kep', 'dau', 'dit', 'bo', 'xien', 'xienquay',
       // Xiên quay
       'xienquay2', 'xienquay3', 'xienquay4', 'xienquay3_full', 'xienquay3_2con', 'xienquay4_full', 'xienquay4_3con', 'xienquay4_2con',
       // Xiên
@@ -103,4 +103,4 @@ const winningInvoiceSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('WinningInvoice', winningInvoiceSchema); 
+module.exports = mongoose.model('WinningInvoice', winningInvoiceSchema);

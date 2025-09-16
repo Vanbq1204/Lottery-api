@@ -70,6 +70,7 @@ const getAdminTotalStatistics = async (req, res) => {
           lotoTotal: 0,
           '2sTotal': 0,
           '3sTotal': 0,
+          '4sTotal': 0,
           tongTotal: 0,
           kepTotal: 0,
           dauTotal: 0,
@@ -80,6 +81,7 @@ const getAdminTotalStatistics = async (req, res) => {
           loto: {},
           '2s': {},
           '3s': {},
+          '4s': {},
           xien: {},
           xienquay: {},
           grouped: {
@@ -104,6 +106,7 @@ const getAdminTotalStatistics = async (req, res) => {
       lotoTotal: 0,
       '2sTotal': 0,
       '3sTotal': 0,
+      '4sTotal': 0,
       tongTotal: 0, // Tổng tiền cược thực tế cho tổng
       kepTotal: 0,  // Tổng tiền cược thực tế cho kép
       dauTotal: 0,  // Tổng tiền cược thực tế cho đầu
@@ -115,6 +118,7 @@ const getAdminTotalStatistics = async (req, res) => {
       loto: {},
       '2s': {},
       '3s': {},
+      '4s': {},
       xien: {},
       xienquay: {},
       grouped: {
@@ -203,6 +207,35 @@ const getAdminTotalStatistics = async (req, res) => {
                 
                 stats['3s'][caseType][paddedNum].totalAmount += betAmountPerNumber;
                 stats['3s'][caseType][paddedNum].count = (stats['3s'][caseType][paddedNum].count || 0) + 1;
+              });
+            }
+          }
+          else if (betType.includes('4s')) {
+            stats['4sTotal'] += betAmount;
+            // 4S statistics - tách từng con số
+            const caseType = item.betType;
+            if (!stats['4s'][caseType]) {
+              stats['4s'][caseType] = {};
+            }
+            
+            // Tách từng con số từ chuỗi (xử lý cả dữ liệu cũ và mới)
+            if (item.numbers) {
+              // Tách chuỗi số - xử lý nhiều format: "1234,5678", "1234, 5678", "1234 5678"
+              const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+              const betAmountPerNumber = Math.floor(betAmount / numbers.length); // Chia đều cho từng con
+              
+              numbers.forEach(num => {
+                const cleanNum = num.trim();
+                const paddedNum = cleanNum.padStart(4, '0'); // 4 số nên pad 4 ký tự
+                if (!stats['4s'][caseType][paddedNum]) {
+                  stats['4s'][caseType][paddedNum] = {
+                    totalAmount: 0,
+                    count: 0
+                  };
+                }
+                
+                stats['4s'][caseType][paddedNum].totalAmount += betAmountPerNumber;
+                stats['4s'][caseType][paddedNum].count = (stats['4s'][caseType][paddedNum].count || 0) + 1;
               });
             }
           }
@@ -371,4 +404,4 @@ const getAdminTotalStatistics = async (req, res) => {
 
 module.exports = {
   getAdminTotalStatistics
-}; 
+};

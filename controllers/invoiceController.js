@@ -272,6 +272,7 @@ const getInvoiceStats = async (req, res) => {
       lotoTotal: 0,
       '2sTotal': 0,
       '3sTotal': 0,
+      '4sTotal': 0,
       tongTotal: 0,
       kepTotal: 0,
       dauTotal: 0,
@@ -282,6 +283,7 @@ const getInvoiceStats = async (req, res) => {
       loto: {}, // Will store loto numbers and their points
       '2s': {}, // Will store 2s numbers and their amounts
       '3s': {}, // Will store 3s numbers and their amounts
+      '4s': {}, // Will store 4s numbers and their amounts
       tong: {}, // Will store tong numbers and their amounts
       kep: {}, // Will store kep types and their amounts
       dau: {}, // Will store dau numbers and their amounts
@@ -347,6 +349,22 @@ const getInvoiceStats = async (req, res) => {
                   stats['3s'][paddedNum] = 0;
                 }
                 stats['3s'][paddedNum] += betAmount;
+              });
+            }
+            break;
+          case '4s':
+            stats['4sTotal'] += amount;
+            // Process 4s numbers and amounts
+            if (item.numbers && item.amount) {
+              const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+              const betAmount = parseInt(item.amount) || 0;
+              
+              numbers.forEach(num => {
+                const paddedNum = num.padStart(4, '0');
+                if (!stats['4s'][paddedNum]) {
+                  stats['4s'][paddedNum] = 0;
+                }
+                stats['4s'][paddedNum] += betAmount;
               });
             }
             break;

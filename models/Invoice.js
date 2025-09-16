@@ -4,7 +4,7 @@ const invoiceItemSchema = new mongoose.Schema({
   betType: {
     type: String,
     required: true,
-    enum: ['loto', '2s', '3s', 'tong', 'kep', 'dau', 'dit', 'bo', 'xien', 'xienquay']
+    enum: ['loto', '2s', '3s', '4s', 'tong', 'kep', 'dau', 'dit', 'bo', 'xien', 'xienquay']
   },
   betTypeLabel: {
     type: String,
@@ -90,4 +90,4 @@ invoiceSchema.index({ adminId: 1, printedAt: -1 });
 invoiceSchema.index({ employeeId: 1, printedAt: -1 });
 invoiceSchema.index({ invoiceId: 1 });
 
-module.exports = mongoose.model('Invoice', invoiceSchema); 
+module.exports = mongoose.model('Invoice', invoiceSchema);

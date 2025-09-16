@@ -136,6 +136,7 @@ const getStoreStatistics = async (req, res) => {
       lotoTotal: 0,
       '2sTotal': 0,
       '3sTotal': 0,
+      '4sTotal': 0,
       tongTotal: 0,
       kepTotal: 0,
       dauTotal: 0,
@@ -147,6 +148,7 @@ const getStoreStatistics = async (req, res) => {
       loto: {}, // Will store loto numbers and their points
       '2s': {},
       '3s': {},
+      '4s': {},
       tong: {},
       kep: {},
       dau: {},
@@ -194,6 +196,17 @@ const getStoreStatistics = async (req, res) => {
                 const amountPerNumber = item.amount || 0;
                 numbers.forEach(num => {
                   stats['3s'][num] = (stats['3s'][num] || 0) + amountPerNumber;
+                });
+              }
+              break;
+
+            case '4s':
+              stats['4sTotal'] += betAmount;
+              if (item.numbers) {
+                const numbers = item.numbers.split(',').map(n => n.trim());
+                const amountPerNumber = item.amount || 0;
+                numbers.forEach(num => {
+                  stats['4s'][num] = (stats['4s'][num] || 0) + amountPerNumber;
                 });
               }
               break;
@@ -335,4 +348,4 @@ module.exports = {
   getMyStores,
   getStoreDetail,
   getStoreStatistics
-}; 
+};
