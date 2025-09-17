@@ -12,6 +12,14 @@ const timeSettingsSchema = new mongoose.Schema({
     required: true,
     default: "18:30"
   },
+  editDeleteCutoffTime: {
+    type: String, // Format: "HH:MM" (24h format)
+    default: "18:15"
+  },
+  editDeleteLimitActive: {
+    type: Boolean,
+    default: false
+  },
   timezone: {
     type: String,
     default: "Asia/Ho_Chi_Minh"
@@ -31,4 +39,4 @@ const timeSettingsSchema = new mongoose.Schema({
 // Index for faster queries
 timeSettingsSchema.index({ adminId: 1 });
 
-module.exports = mongoose.model('TimeSettings', timeSettingsSchema); 
+module.exports = mongoose.model('TimeSettings', timeSettingsSchema);

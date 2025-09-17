@@ -59,6 +59,64 @@ const checkBettingTimeAllowed = async (req, res, next) => {
   }
 };
 
+// Middleware kiểm tra thời gian sửa/xóa hóa đơn
+const checkEditDeleteTimeAllowed = async (req, res, next) => {
+  try {
+    // Chỉ áp dụng cho employee
+    if (req.user.role !== 'employee') {
+      return next();
+    }
+
+    // Lấy thông tin store của employee để biết adminId
+    const store = await Store.findById(req.user.storeId);
+    if (!store) {
+      return res.status(400).json({
+        success: false,
+        message: 'Không tìm thấy thông tin cửa hàng'
+      });
+    }
+
+    const adminId = store.adminId;
+
+    // Lấy cài đặt thời gian của admin
+    const timeSettings = await TimeSettings.findOne({ adminId });
+
+    // Nếu không có cài đặt hoặc không kích hoạt giới hạn sửa/xóa, cho phép
+    if (!timeSettings || !timeSettings.editDeleteLimitActive) {
+      return next();
+    }
+
+    // Kiểm tra thời gian hiện tại (Vietnam timezone)
+    const currentTime = getCurrentVietnamTime();
+    const allowed = isBeforeCutoffTime(timeSettings.editDeleteCutoffTime);
+
+    if (!allowed) {
+      return res.status(403).json({
+        success: false,
+        message: `Không thể sửa hoặc xóa hóa đơn vì đã quá thời gian quy định (${timeSettings.editDeleteCutoffTime}). Hiện tại: ${currentTime}`,
+        cutoffTime: timeSettings.editDeleteCutoffTime,
+        currentTime: currentTime,
+        code: 'EDIT_DELETE_TIME_EXPIRED'
+      });
+    }
+
+    // Thêm thông tin thời gian vào request để log
+    req.editDeleteTimeInfo = {
+      cutoffTime: timeSettings.editDeleteCutoffTime,
+      currentTime: currentTime,
+      adminId: adminId.toString()
+    };
+
+    next();
+
+  } catch (error) {
+    console.error('Edit/Delete time check middleware error:', error);
+    // Nếu có lỗi trong middleware, vẫn cho phép tiếp tục (fail-safe)
+    next();
+  }
+};
+
 module.exports = {
-  checkBettingTimeAllowed
-}; 
+  checkBettingTimeAllowed,
+  checkEditDeleteTimeAllowed
+};

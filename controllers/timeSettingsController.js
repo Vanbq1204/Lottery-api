@@ -36,7 +36,12 @@ const getTimeSettings = async (req, res) => {
 const updateTimeSettings = async (req, res) => {
   try {
     const adminId = req.user.id;
-    const { bettingCutoffTime, isActive } = req.body;
+    const { 
+      bettingCutoffTime, 
+      isActive, 
+      editDeleteCutoffTime, 
+      editDeleteLimitActive 
+    } = req.body;
     
     // Validate time format (HH:MM)
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
@@ -47,12 +52,31 @@ const updateTimeSettings = async (req, res) => {
       });
     }
     
+    // Validate editDeleteCutoffTime if provided
+    if (editDeleteCutoffTime && !timeRegex.test(editDeleteCutoffTime)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Định dạng thời gian giới hạn sửa/xóa không hợp lệ. Vui lòng sử dụng định dạng HH:MM (24h)'
+      });
+    }
+    
     let timeSettings = await TimeSettings.findOne({ adminId });
     
     if (timeSettings) {
       // Cập nhật existing settings
       timeSettings.bettingCutoffTime = bettingCutoffTime;
       timeSettings.isActive = isActive !== undefined ? isActive : timeSettings.isActive;
+      
+      // Cập nhật thời gian giới hạn sửa/xóa nếu có
+      if (editDeleteCutoffTime) {
+        timeSettings.editDeleteCutoffTime = editDeleteCutoffTime;
+      }
+      
+      // Cập nhật trạng thái kích hoạt giới hạn sửa/xóa
+      if (editDeleteLimitActive !== undefined) {
+        timeSettings.editDeleteLimitActive = editDeleteLimitActive;
+      }
+      
       timeSettings.updatedBy = adminId;
       await timeSettings.save();
     } else {
@@ -61,6 +85,8 @@ const updateTimeSettings = async (req, res) => {
         adminId,
         bettingCutoffTime,
         isActive: isActive !== undefined ? isActive : true,
+        editDeleteCutoffTime: editDeleteCutoffTime || "18:15",
+        editDeleteLimitActive: editDeleteLimitActive !== undefined ? editDeleteLimitActive : false,
         updatedBy: adminId
       });
       await timeSettings.save();
@@ -130,4 +156,4 @@ module.exports = {
   getTimeSettings,
   updateTimeSettings,
   checkBettingAllowed
-}; 
+};

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../controllers/authController');
-const { checkBettingTimeAllowed } = require('../middleware/timeCheck');
+const { checkBettingTimeAllowed, checkEditDeleteTimeAllowed } = require('../middleware/timeCheck');
 const {
   saveInvoice,
   getInvoicesByStore,
@@ -18,11 +18,11 @@ const {
 // Lưu hóa đơn mới (chỉ employee) - có kiểm tra thời gian
 router.post('/save', authenticateToken, checkBettingTimeAllowed, saveInvoice);
 
-// Sửa hóa đơn
-router.put('/edit/:invoiceId', authenticateToken, editInvoice);
+// Sửa hóa đơn - có kiểm tra thời gian
+router.put('/edit/:invoiceId', authenticateToken, checkEditDeleteTimeAllowed, editInvoice);
 
-// Xóa hóa đơn
-router.delete('/delete/:invoiceId', authenticateToken, deleteInvoice);
+// Xóa hóa đơn - có kiểm tra thời gian
+router.delete('/delete/:invoiceId', authenticateToken, checkEditDeleteTimeAllowed, deleteInvoice);
 
 // Lấy danh sách hóa đơn theo store (employee)
 router.get('/store', authenticateToken, getInvoicesByStore);

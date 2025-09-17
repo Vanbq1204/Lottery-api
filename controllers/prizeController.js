@@ -5,11 +5,14 @@ const { getVietnamDayRange } = require('../utils/dateUtils');
 
 // Helper function để lấy multiplier theo storeId
 const getMultiplierByStore = async (storeId, betType, isActive = true) => {
-  return await PrizeMultiplier.findOne({ 
+  console.log(`[MULTIPLIER DEBUG] Tìm hệ số thưởng cho ${betType} với storeId: ${storeId}`);
+  const multiplier = await PrizeMultiplier.findOne({ 
     storeId, 
     betType, 
     isActive 
   });
+  console.log(`[MULTIPLIER DEBUG] Kết quả tìm hệ số thưởng cho ${betType}: ${multiplier ? 'Tìm thấy: ' + multiplier.multiplier : 'Không tìm thấy'}`);
+  return multiplier;
 };
 
 // Hàm tính tổ hợp C(n, k)
@@ -460,11 +463,32 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
       let description = '';
 
       if (combo.length === 2) {
-        // Xiên quay 2 số
-        multiplier = 12;
+        // Xiên quay 2 số - Xác định xem đây là xiên quay 3 hay xiên quay 4
+        let targetBetType = '';
         
-        betType = 'xienquay2';
-        description = `Xiên quay ${betNumbers.length} số trúng 2 con`;
+        // Xác định loại xiên quay dựa vào số lượng con số đánh
+        if (betNumbers.length === 3) {
+          targetBetType = 'xienquay3_2con';
+          description = `Xiên quay 3 - Trúng 2 con`;
+        } else if (betNumbers.length === 4) {
+          targetBetType = 'xienquay4_2con';
+          description = `Xiên quay 4 - Trúng 2 con`;
+        }
+        
+        console.log(`[XIENQUAY DEBUG] -----> Xác định loại xiên quay: ${targetBetType}`);
+        
+        // Tìm hệ số thưởng với betType chính xác
+        let multiplierData = await getMultiplierByStore(storeId, targetBetType);
+        console.log(`[XIENQUAY DEBUG] -----> Tìm hệ số thưởng cho ${targetBetType}: ${multiplierData ? 'Tìm thấy: ' + multiplierData.multiplier : 'Không tìm thấy'}`);
+        
+        if (multiplierData) {
+          multiplier = multiplierData.multiplier;
+          betType = targetBetType;
+        } else {
+          multiplier = 12; // Giá trị mặc định
+          betType = targetBetType;
+          console.log(`[XIENQUAY DEBUG] -----> Không tìm thấy hệ số thưởng cho ${targetBetType}, sử dụng giá trị mặc định: ${multiplier}`);
+        }
       } else if (combo.length === 3) {
         if (combo.matchCount === 3) {
           // Xiên quay 3 số - trúng cả 3 cặp
@@ -476,9 +500,25 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
           }
         } else if (combo.matchCount === 2) {
           // Xiên quay 3 số - trúng 2 cặp
-          const multiplierData = await getMultiplierByStore(storeId, 'xienquay3_2con');
+          // Thử tìm với betType chính xác
+          let multiplierData = await getMultiplierByStore(storeId, 'xienquay3_2con');
+          
+          // Nếu không tìm thấy, thử tìm với betType chung
+          if (!multiplierData) {
+            multiplierData = await getMultiplierByStore(storeId, 'xienquay');
+            console.log(`[XIENQUAY DEBUG] -----> Không tìm thấy hệ số thưởng cho xienquay3_2con, thử tìm với xienquay: ${multiplierData ? 'Tìm thấy: ' + multiplierData.multiplier : 'Không tìm thấy'}`);
+          } else {
+            console.log(`[XIENQUAY DEBUG] -----> Tìm thấy hệ số thưởng cho xienquay3_2con: ${multiplierData.multiplier}`);
+          }
+          
           if (multiplierData) {
             multiplier = multiplierData.multiplier;
+            betType = 'xienquay3_2con';
+            description = `Xiên quay ${betNumbers.length} - Trúng 2 con`;
+          } else {
+            // Fallback nếu không tìm thấy hệ số trong database
+            console.log(`[XIENQUAY DEBUG] -----> Không tìm thấy hệ số thưởng cho xienquay3_2con, sử dụng giá trị mặc định`);
+            multiplier = 12; // Giá trị mặc định
             betType = 'xienquay3_2con';
             description = `Xiên quay ${betNumbers.length} - Trúng 2 con`;
           }
@@ -494,17 +534,49 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
           }
         } else if (combo.matchCount === 3) {
           // Xiên quay 4 số - trúng 3 cặp
-          const multiplierData = await getMultiplierByStore(storeId, 'xienquay4_3con');
+          // Thử tìm với betType chính xác
+          let multiplierData = await getMultiplierByStore(storeId, 'xienquay4_3con');
+          
+          // Nếu không tìm thấy, thử tìm với betType chung
+          if (!multiplierData) {
+            multiplierData = await getMultiplierByStore(storeId, 'xienquay');
+            console.log(`[XIENQUAY DEBUG] -----> Không tìm thấy hệ số thưởng cho xienquay4_3con, thử tìm với xienquay: ${multiplierData ? 'Tìm thấy: ' + multiplierData.multiplier : 'Không tìm thấy'}`);
+          } else {
+            console.log(`[XIENQUAY DEBUG] -----> Tìm thấy hệ số thưởng cho xienquay4_3con: ${multiplierData.multiplier}`);
+          }
+          
           if (multiplierData) {
             multiplier = multiplierData.multiplier;
+            betType = 'xienquay4_3con';
+            description = `Xiên quay ${betNumbers.length} - Trúng 3 con`;
+          } else {
+            // Fallback nếu không tìm thấy hệ số trong database
+            console.log(`[XIENQUAY DEBUG] -----> Không tìm thấy hệ số thưởng cho xienquay4_3con, sử dụng giá trị mặc định`);
+            multiplier = 12; // Giá trị mặc định
             betType = 'xienquay4_3con';
             description = `Xiên quay ${betNumbers.length} - Trúng 3 con`;
           }
         } else if (combo.matchCount === 2) {
           // Xiên quay 4 số - trúng 2 cặp
-          const multiplierData = await getMultiplierByStore(storeId, 'xienquay4_2con');
+          // Thử tìm với betType chính xác
+          let multiplierData = await getMultiplierByStore(storeId, 'xienquay4_2con');
+          
+          // Nếu không tìm thấy, thử tìm với betType chung
+          if (!multiplierData) {
+            multiplierData = await getMultiplierByStore(storeId, 'xienquay');
+            console.log(`[XIENQUAY DEBUG] -----> Không tìm thấy hệ số thưởng cho xienquay4_2con, thử tìm với xienquay: ${multiplierData ? 'Tìm thấy: ' + multiplierData.multiplier : 'Không tìm thấy'}`);
+          } else {
+            console.log(`[XIENQUAY DEBUG] -----> Tìm thấy hệ số thưởng cho xienquay4_2con: ${multiplierData.multiplier}`);
+          }
+          
           if (multiplierData) {
             multiplier = multiplierData.multiplier;
+            betType = 'xienquay4_2con';
+            description = `Xiên quay ${betNumbers.length} - Trúng 2 con`;
+          } else {
+            // Fallback nếu không tìm thấy hệ số trong database
+            console.log(`[XIENQUAY DEBUG] -----> Không tìm thấy hệ số thưởng cho xienquay4_2con, sử dụng giá trị mặc định`);
+            multiplier = 12; // Giá trị mặc định
             betType = 'xienquay4_2con';
             description = `Xiên quay ${betNumbers.length} - Trúng 2 con`;
           }
