@@ -13,6 +13,8 @@ const prizeMultiplierSchema = new mongoose.Schema({
       'loto', '2s', '3s', '4s', 'tong', 'kep', 'dau', 'dit', 'bo', 'xien', 'xienquay',
       // 3s betTypes
       '3s_gdb', '3s_gdb_g1', '3s_gdb2_g1', '3s_g1', '3s_g6', '3s_2digits_gdb',
+      // 4s betTypes
+      '4s_full', '4s_3digits', '4s_2digits',
       // Xiên betTypes
       'xien2_full', 'xien2_1hit', 'xien3_full', 'xien3_2hit_both', 'xien3_2hit_one',
       'xien4_full', 'xien4_3hit_all', 'xien4_3hit_two', 'xien4_3hit_one',

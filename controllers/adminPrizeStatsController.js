@@ -76,6 +76,7 @@ const getAdminPrizeStatistics = async (req, res) => {
           loto: { totalPrize: 0, totalWinningNumbers: 0, winningNumbers: {} },
           '2s': { totalPrize: 0, winningNumbers: {} },
           '3s': { totalPrize: 0, totalCases: 0, cases: {} },
+          '4s': { totalPrize: 0, totalCases: 0, cases: {} },
           xien: { totalPrize: 0, totalCases: 0, cases: {} },
           xienquay: { totalPrize: 0, totalCases: 0, cases: {} },
           others: { totalPrize: 0, totalCases: 0, cases: {} }
@@ -158,6 +159,7 @@ const getAdminPrizeStatistics = async (req, res) => {
           loto: { totalPrize: 0, totalWinningNumbers: 0, winningNumbers: {} },
           '2s': { totalPrize: 0, winningNumbers: {} },
           '3s': { totalPrize: 0, totalCases: 0, cases: {} },
+          '4s': { totalPrize: 0, totalCases: 0, cases: {} },
           xien: { totalPrize: 0, totalCases: 0, cases: {} },
           xienquay: { totalPrize: 0, totalCases: 0, cases: {} },
           others: { totalPrize: 0, totalCases: 0, cases: {} }
@@ -177,6 +179,11 @@ const getAdminPrizeStatistics = async (req, res) => {
         winningNumbers: {}
       },
       '3s': {
+        totalPrize: 0,
+        totalCases: 0,
+        cases: {}
+      },
+      '4s': {
         totalPrize: 0,
         totalCases: 0,
         cases: {}
@@ -309,6 +316,48 @@ const getAdminPrizeStatistics = async (req, res) => {
             
             // Add detail for display
             statistics['3s'].cases[caseType].details.push({
+              numbers: numbers,
+              betAmount: betAmount,
+              multiplier: multiplier,
+              prizeAmount: prizeAmount
+            });
+
+          } else if (betType.startsWith('4s')) {
+            // 4s statistics
+            statistics['4s'].totalPrize += prizeAmount;
+            statistics['4s'].totalCases += 1;
+            
+            // Use betType directly since winningType is not set in DB
+            const caseType = betType;
+            if (!statistics['4s'].cases[caseType]) {
+              statistics['4s'].cases[caseType] = {
+                label: getCaseLabel(caseType),
+                totalPrize: 0,
+                details: [],
+                numberGroups: {}
+              };
+            }
+            
+            statistics['4s'].cases[caseType].totalPrize += prizeAmount;
+            
+            // Group by numbers for better display
+            if (!statistics['4s'].cases[caseType].numberGroups[numbers]) {
+              statistics['4s'].cases[caseType].numberGroups[numbers] = {
+                totalBetAmount: 0,
+                totalPrize: 0,
+                multiplier: multiplier,
+                count: 0
+              };
+            }
+            
+            statistics['4s'].cases[caseType].numberGroups[numbers].totalBetAmount += betAmount;
+            statistics['4s'].cases[caseType].numberGroups[numbers].totalPrize += prizeAmount;
+            statistics['4s'].cases[caseType].numberGroups[numbers].count += 1;
+            
+            console.log(`🎯 4S: ${caseType} - ${numbers}: ${betAmount}n x ${multiplier} = ${prizeAmount}`);
+            
+            // Add detail for display
+            statistics['4s'].cases[caseType].details.push({
               numbers: numbers,
               betAmount: betAmount,
               multiplier: multiplier,
@@ -490,6 +539,11 @@ const getCaseLabel = (caseType) => {
     '3s_g1': '3 số trùng G1',
     '3s_g6': '3 số trùng G6',
     
+    // 4s cases
+    '4s_full': '4 số đủ',
+    '4s_3digits': '4 số trúng 3 số',
+    '4s_2digits': '4 số trúng 2 số',
+    
     // Xien cases
     'xien2_full': 'Xiên 2 đủ',
     'xien2_1hit': 'Xiên 2 trúng 1',
@@ -528,4 +582,4 @@ const getCaseLabel = (caseType) => {
 
 module.exports = {
   getAdminPrizeStatistics
-}; 
+};

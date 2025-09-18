@@ -1317,6 +1317,116 @@ const calculate3sPrize = async (invoiceItem, lotteryResult, storeId) => {
   return null;
 };
 
+// Hàm tính thưởng 4 số
+const calculate4sPrize = async (invoiceItem, lotteryResult, storeId) => {
+  try {
+    console.log(`[4S PRIZE DEBUG] Bắt đầu tính thưởng 4 số cho: ${invoiceItem.numbers}`);
+    
+    if (!lotteryResult || !lotteryResult.results || !lotteryResult.results.gdb) {
+      console.log(`[4S PRIZE DEBUG] Không có kết quả xổ số hoặc giải đặc biệt`);
+      return null;
+    }
+    
+    const gdbNumber = lotteryResult.results.gdb;
+    const gdb4Digits = gdbNumber.slice(-4); // Lấy 4 số cuối của giải đặc biệt
+    const gdb3Digits = gdbNumber.slice(-3); // Lấy 3 số cuối của giải đặc biệt
+    const gdb2Digits = gdbNumber.slice(-2); // Lấy 2 số cuối của giải đặc biệt
+    
+    console.log(`[4S PRIZE DEBUG] Giải đặc biệt: ${gdbNumber}`);
+    console.log(`[4S PRIZE DEBUG] 4 số cuối GĐB: ${gdb4Digits}, 3 số cuối: ${gdb3Digits}, 2 số cuối: ${gdb2Digits}`);
+    
+    const betAmount = invoiceItem.amount;
+    const totalWinnings = [];
+    
+    // Xử lý dữ liệu đầu vào - có thể là chuỗi hoặc mảng
+    let betNumbers = [];
+    if (typeof invoiceItem.numbers === 'string') {
+      betNumbers = invoiceItem.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+    } else if (Array.isArray(invoiceItem.numbers)) {
+      betNumbers = invoiceItem.numbers;
+    } else {
+      console.log(`[4S PRIZE DEBUG] Định dạng numbers không hợp lệ: ${typeof invoiceItem.numbers}`);
+      return null;
+    }
+    
+    console.log(`[4S PRIZE DEBUG] Các số 4 số đã cược: [${betNumbers.join(', ')}]`);
+    
+    // Xử lý từng số trong danh sách
+    for (const numberStr of betNumbers) {
+      const paddedNumber = numberStr.padStart(4, '0'); // Đảm bảo số có 4 chữ số
+      console.log(`[4S PRIZE DEBUG] Kiểm tra số: ${paddedNumber}`);
+      
+      // Kiểm tra trùng 4 số
+      if (paddedNumber === gdb4Digits) {
+        console.log(`[4S PRIZE DEBUG] Trúng 4 số: ${paddedNumber}`);
+        const multiplier = await getMultiplierByStore(storeId, '4s_full');
+        if (multiplier) {
+          const winningAmount = betAmount * multiplier.multiplier * 1000;
+          totalWinnings.push({
+            betType: '4s_full',
+            type: 'Trúng 4 số',
+            number: paddedNumber,
+            multiplier: multiplier.multiplier,
+            winningAmount: winningAmount
+          });
+        }
+      }
+      // Kiểm tra trùng 3 số cuối
+      else if (paddedNumber.slice(-3) === gdb3Digits) {
+        console.log(`[4S PRIZE DEBUG] Trúng 3 số cuối: ${paddedNumber}`);
+        const multiplier = await getMultiplierByStore(storeId, '4s_3digits');
+        if (multiplier) {
+          const winningAmount = betAmount * multiplier.multiplier * 1000;
+          totalWinnings.push({
+            betType: '4s_3digits',
+            type: 'Trúng 3 số cuối',
+            number: paddedNumber,
+            multiplier: multiplier.multiplier,
+            winningAmount: winningAmount
+          });
+        }
+      }
+      // Kiểm tra trùng 2 số cuối
+      else if (paddedNumber.slice(-2) === gdb2Digits) {
+        console.log(`[4S PRIZE DEBUG] Trúng 2 số cuối: ${paddedNumber}`);
+        const multiplier = await getMultiplierByStore(storeId, '4s_2digits');
+        if (multiplier) {
+          const winningAmount = betAmount * multiplier.multiplier * 1000;
+          totalWinnings.push({
+            betType: '4s_2digits',
+            type: 'Trúng 2 số cuối',
+            number: paddedNumber,
+            multiplier: multiplier.multiplier,
+            winningAmount: winningAmount
+          });
+        }
+      }
+    }
+    
+    if (totalWinnings.length > 0) {
+      console.log(`[4S PRIZE DEBUG] Tổng số trúng: ${totalWinnings.length}`);
+      // Trả về array các winning items riêng biệt cho mỗi số trúng
+      return totalWinnings.map(w => ({
+        betType: w.betType,
+        betTypeLabel: w.type,
+        numbers: w.number,
+        betAmount: betAmount,
+        winningCount: 1,
+        multiplier: w.multiplier,
+        prizeAmount: w.winningAmount,
+        detailString: `${w.number} (${w.type}): ${betAmount}n x ${w.multiplier} = ${w.winningAmount.toLocaleString('vi-VN')} đ`
+      }));
+    }
+    
+    console.log(`[4S PRIZE DEBUG] Không trúng thưởng`);
+    return null;
+    
+  } catch (error) {
+    console.error('[4S PRIZE DEBUG] Lỗi tính thưởng 4 số:', error);
+    return null;
+  }
+};
+
 // Hàm tính thưởng cho một hóa đơn
 const calculateInvoicePrize = async (invoice, lotteryDate, inputDate) => {
   try {
@@ -1355,6 +1465,9 @@ const calculateInvoicePrize = async (invoice, lotteryDate, inputDate) => {
           break;
         case '3s':
           winningItem = await calculate3sPrize(item, lotteryResult, invoice.storeId);
+          break;
+        case '4s':
+          winningItem = await calculate4sPrize(item, lotteryResult, invoice.storeId);
           break;
         case 'tong':
           winningItem = await calculateTongPrize(item, lotteryResult, invoice.storeId);
@@ -1669,6 +1782,11 @@ const initializeDefaultMultipliers = async () => {
       { betType: '3s_g6', subType: null, multiplier: 5, description: '3 số trùng giải 6', isActive: true },
       { betType: '3s_2digits_gdb', subType: null, multiplier: 5, description: '3 số có 2 số cuối trùng GĐB (x5)', isActive: true },
       
+      // 3 betType riêng biệt cho 4 số
+      { betType: '4s_full', subType: null, multiplier: 1200, description: '4 số trùng hoàn toàn với 4 số cuối GĐB', isActive: true },
+      { betType: '4s_3digits', subType: null, multiplier: 50, description: '3 số cuối trùng với 3 số cuối GĐB', isActive: true },
+      { betType: '4s_2digits', subType: null, multiplier: 5, description: '2 số cuối trùng với 2 số cuối GĐB', isActive: true },
+      
       { betType: 'tong', subType: null, multiplier: 85, description: 'Hệ số thưởng tổng', isActive: true },
       { betType: 'kep', subType: null, multiplier: 85, description: 'Hệ số thưởng kép', isActive: true },
       { betType: 'dau', subType: null, multiplier: 85, description: 'Hệ số thưởng đầu', isActive: true },
@@ -1766,6 +1884,7 @@ module.exports = {
   updatePrizeMultiplier,
   initializeDefaultMultipliers,
   calculate3sPrize,
+  calculate4sPrize,
   calculateXienQuayPrize,
   calculateXienPrize
 };

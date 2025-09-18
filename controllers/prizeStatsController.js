@@ -123,6 +123,12 @@ const analyzeWinningData = (winningInvoices, lotoNumbersFromKQXS = []) => {
       cases: {}, // {betType: {count, totalPrize, numbers: []}}
       details: []
     },
+    '4s': {
+      totalPrize: 0,
+      totalCases: 0,
+      cases: {}, // {betType: {count, totalPrize, numbers: []}}
+      details: []
+    },
     xien: {
       totalPrize: 0,
       totalCases: 0,
@@ -156,6 +162,8 @@ const analyzeWinningData = (winningInvoices, lotoNumbersFromKQXS = []) => {
         analyze2sItem(item, stats['2s']);
       } else if (betType.startsWith('3s_')) {
         analyze3sItem(item, stats['3s']);
+      } else if (betType.startsWith('4s_')) {
+        analyze4sItem(item, stats['4s']);
       } else if (betType.startsWith('xien') && !betType.startsWith('xienquay')) {
         analyzeXienItem(item, stats.xien);
       } else if (betType.startsWith('xienquay')) {
@@ -312,6 +320,61 @@ const analyze3sItem = (item, stats3s) => {
   });
 };
 
+// Phân tích 4 số
+const analyze4sItem = (item, stats4s) => {
+  stats4s.totalPrize += item.prizeAmount;
+  stats4s.totalCases += 1;
+  
+  const caseType = item.betType; // 4s_gdb, 4s_g1, etc.
+  const caseLabel = item.betTypeLabel || item.betType;
+  
+  if (!stats4s.cases[caseType]) {
+    stats4s.cases[caseType] = {
+      label: caseLabel,
+      count: 0,
+      totalPrize: 0,
+      numberGroups: {}, // Nhóm theo số để gộp
+      details: []
+    };
+  }
+  
+  // Gộp theo số
+  const number = item.numbers;
+  if (!stats4s.cases[caseType].numberGroups[number]) {
+    stats4s.cases[caseType].numberGroups[number] = {
+      count: 0,
+      totalBetAmount: 0,
+      totalPrize: 0,
+      multiplier: item.multiplier,
+      detailString: item.detailString
+    };
+  }
+  
+  stats4s.cases[caseType].count += 1;
+  stats4s.cases[caseType].totalPrize += item.prizeAmount;
+  stats4s.cases[caseType].numberGroups[number].count += 1;
+  stats4s.cases[caseType].numberGroups[number].totalBetAmount += item.betAmount;
+  stats4s.cases[caseType].numberGroups[number].totalPrize += item.prizeAmount;
+  
+  stats4s.cases[caseType].details.push({
+    numbers: item.numbers,
+    betAmount: item.betAmount,
+    multiplier: item.multiplier,
+    prizeAmount: item.prizeAmount,
+    detailString: item.detailString
+  });
+  
+  stats4s.details.push({
+    caseType: caseType,
+    caseLabel: caseLabel,
+    numbers: item.numbers,
+    betAmount: item.betAmount,
+    multiplier: item.multiplier,
+    prizeAmount: item.prizeAmount,
+    detailString: item.detailString
+  });
+};
+
 // Phân tích xiên
 const analyzeXienItem = (item, xienStats) => {
   xienStats.totalPrize += item.prizeAmount;
@@ -435,4 +498,4 @@ const analyzeOtherItem = (item, otherStats) => {
 
 module.exports = {
   getPrizeStatistics
-}; 
+};
