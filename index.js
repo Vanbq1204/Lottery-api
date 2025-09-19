@@ -9,7 +9,7 @@ const app = express();
 // Cấu hình CORS cho production
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.FRONTEND_URL, 'https://vjamin.vercel.app/']
+    ? [process.env.FRONTEND_URL, 'https://vjamin.vercel.app']
     : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003'],
   credentials: true,
   optionsSuccessStatus: 200
