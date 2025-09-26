@@ -4,6 +4,7 @@ const { getMyStores, getStoreDetail, getStoreStatistics } = require('../controll
 const { getAdminTotalStatistics } = require('../controllers/adminTotalStatsController');
 const { getAdminPrizeStatistics } = require('../controllers/adminPrizeStatsController');
 const { getTimeSettings, updateTimeSettings, checkBettingAllowed } = require('../controllers/timeSettingsController');
+const { getCleanupStats, performCleanup } = require('../controllers/dataCleanupController');
 const { authenticateToken } = require('../controllers/authController');
 
 // Middleware kiểm tra quyền admin
@@ -37,4 +38,8 @@ router.get('/time-settings', authenticateToken, requireAdmin, getTimeSettings);
 router.put('/time-settings', authenticateToken, requireAdmin, updateTimeSettings);
 router.get('/check-betting-allowed', checkBettingAllowed);
 
-module.exports = router; 
+// Route cho chức năng làm sạch dữ liệu
+router.get('/data-cleanup/stats', authenticateToken, requireAdmin, getCleanupStats);
+router.delete('/data-cleanup', authenticateToken, requireAdmin, performCleanup);
+
+module.exports = router;
