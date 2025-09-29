@@ -3,6 +3,7 @@ const router = express.Router();
 const { getMyStores, getStoreDetail, getStoreStatistics } = require('../controllers/adminController');
 const { getAdminTotalStatistics } = require('../controllers/adminTotalStatsController');
 const { getAdminPrizeStatistics } = require('../controllers/adminPrizeStatsController');
+const { getStorePrizeStatistics } = require('../controllers/adminStorePrizeStatsController');
 const { getTimeSettings, updateTimeSettings, checkBettingAllowed } = require('../controllers/timeSettingsController');
 const { getCleanupStats, performCleanup } = require('../controllers/dataCleanupController');
 const { authenticateToken } = require('../controllers/authController');
@@ -32,6 +33,9 @@ router.get('/total-statistics', authenticateToken, requireAdmin, getAdminTotalSt
 
 // Route lấy thống kê thưởng tổng hợp của admin
 router.get('/prize-statistics', authenticateToken, requireAdmin, getAdminPrizeStatistics);
+
+// Route lấy thống kê thưởng cho cửa hàng cụ thể
+router.get('/store-prize-statistics', authenticateToken, requireAdmin, getStorePrizeStatistics);
 
 // Routes quản lý thời gian nhập cược
 router.get('/time-settings', authenticateToken, requireAdmin, getTimeSettings);
