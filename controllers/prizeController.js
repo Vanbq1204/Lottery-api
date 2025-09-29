@@ -980,10 +980,10 @@ const calculateKepPrize = async (invoiceItem, lotteryResult, storeId) => {
       
       console.log(`[PRIZE DEBUG] -----> Kiểm tra kép: '${kepType}'`);
       
-      if (kepType === 'bằng' && kepBang.includes(lastTwoDigits)) {
+      if ((kepType === 'bằng' || kepType === 'bang') && kepBang.includes(lastTwoDigits)) {
         isWinning = true;
         console.log(`[PRIZE DEBUG] -----> Kép bằng trúng! Đề về: ${lastTwoDigits}`);
-      } else if (kepType === 'lệch' && kepLech.includes(lastTwoDigits)) {
+      } else if ((kepType === 'lệch' || kepType === 'lech') && kepLech.includes(lastTwoDigits)) {
         isWinning = true;
         console.log(`[PRIZE DEBUG] -----> Kép lệch trúng! Đề về: ${lastTwoDigits}`);
       } else {
