@@ -387,20 +387,26 @@ const getStorePrizeStatistics = async (req, res) => {
                   totalBetAmount: 0,
                   totalPrize: 0,
                   multiplier: multiplier,
-                  count: 0
+                  count: 0,
+                  isXienNhay: winningItem.isXienNhay || false
                 };
               }
               
               statistics.xien.cases[caseTypeXien].numberGroups[numbersString].totalBetAmount += betAmount;
               statistics.xien.cases[caseTypeXien].numberGroups[numbersString].totalPrize += prizeAmount;
               statistics.xien.cases[caseTypeXien].numberGroups[numbersString].count += 1;
+              // Update isXienNhay if any item in this group is xiên nháy
+              if (winningItem.isXienNhay) {
+                statistics.xien.cases[caseTypeXien].numberGroups[numbersString].isXienNhay = true;
+              }
               
               statistics.xien.cases[caseTypeXien].details.push({
                 numbers: numbersString,
                 betAmount: betAmount,
                 multiplier: multiplier,
                 prizeAmount: prizeAmount,
-                detailString: `${numbersString}: ${betAmount}n x ${multiplier} = ${prizeAmount.toLocaleString('vi-VN')} đ`
+                detailString: `${numbersString}: ${betAmount}n x ${multiplier} = ${prizeAmount.toLocaleString('vi-VN')} đ`,
+                isXienNhay: winningItem.isXienNhay || false
               });
               
             } else if (betType === 'xienquay' || betType === 'xienquay3' || betType === 'xienquay4' || betType.includes('xienquay')) {

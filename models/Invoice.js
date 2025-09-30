@@ -29,6 +29,10 @@ const invoiceItemSchema = new mongoose.Schema({
   totalAmount: {
     type: Number,
     required: true
+  },
+  isXienNhay: {
+    type: Boolean,
+    default: false // Chỉ dành cho xiên nháy
   }
 });
 

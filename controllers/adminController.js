@@ -300,7 +300,9 @@ const getStoreStatistics = async (req, res) => {
                 const xienNumbers = item.numbers.split(',').map(n => n.trim());
                 xienNumbers.forEach(xienNum => {
                   if (xienNum) {
-                    stats.xien[xienNum] = (stats.xien[xienNum] || 0) + amountPerNumber;
+                    // Tạo key với '(xiên nháy)' nếu isXienNhay = true
+                    const key = item.isXienNhay ? `${xienNum} (xiên nháy)` : xienNum;
+                    stats.xien[key] = (stats.xien[key] || 0) + amountPerNumber;
                   }
                 });
               }

@@ -43,6 +43,10 @@ const winningItemSchema = new mongoose.Schema({
   },
   betTypeLabel: {
     type: String
+  },
+  isXienNhay: {
+    type: Boolean,
+    default: false
   }
 });
 

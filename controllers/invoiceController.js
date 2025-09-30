@@ -454,17 +454,21 @@ const getInvoiceStats = async (req, res) => {
             }
             break;
           case 'xien':
-            stats.xienTotal += amount;
+            // Apply 1.2x multiplier for xiên nháy when calculating total
+            const xienAmount = item.isXienNhay ? amount * 1.2 : amount;
+            stats.xienTotal += xienAmount;
             // Process xien combinations and amounts
             if (item.numbers && item.amount) {
               const combinations = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
               const betAmount = parseInt(item.amount) || 0;
               
               combinations.forEach(combo => {
-                if (!stats.xien[combo]) {
-                  stats.xien[combo] = 0;
+                // Add (xiên nháy) suffix if isXienNhay is true
+                const displayCombo = item.isXienNhay ? `${combo} (xiên nháy)` : combo;
+                if (!stats.xien[displayCombo]) {
+                  stats.xien[displayCombo] = 0;
                 }
-                stats.xien[combo] += betAmount;
+                stats.xien[displayCombo] += betAmount;
               });
             }
             break;

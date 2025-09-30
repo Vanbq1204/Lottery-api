@@ -256,7 +256,12 @@ const getAdminTotalStatistics = async (req, res) => {
               combinations.forEach(combination => {
                 // Tách từng tổ hợp thành các số (ví dụ: "12-33-22" -> ["12", "33", "22"])
                 const numbers = combination.split(/[\s\-]+/).filter(n => n.length > 0);
-                const numbersKey = numbers.join('-');
+                let numbersKey = numbers.join('-');
+                
+                // Thêm '(xiên nháy)' vào key nếu isXienNhay = true
+                if (item.isXienNhay) {
+                  numbersKey = `${numbersKey} (xiên nháy)`;
+                }
                 
                 if (!stats.xien[caseType][numbersKey]) {
                   stats.xien[caseType][numbersKey] = {

@@ -733,6 +733,32 @@ const calculateXienPrize = async (invoiceItem, lotteryResult, storeId) => {
           bestBetType = 'xien2_1hit';
         }
       }
+      
+      // Logic đặc biệt cho xiên nháy
+      if (invoiceItem.isXienNhay) {
+        console.log(`[XIEN DEBUG] ---> Đây là xiên nháy, áp dụng logic đặc biệt`);
+        
+        // Trường hợp 1: 1 con có ≥2 nháy và con còn lại không trúng
+        if (hitCount === 1 && multiHitCount >= 1) {
+          const multiplierData = await getMultiplierByStore(storeId, 'xien2_full');
+          if (multiplierData) {
+            bestMultiplier = multiplierData.multiplier;
+            bestDescription = 'Xiên nháy - 1 con ≥2 nháy, 1 con không trúng';
+            bestBetType = 'xien2_full';
+            console.log(`[XIEN DEBUG] ---> Xiên nháy trường hợp 1: dùng hệ số xiên 2 trúng đầy đủ`);
+          }
+        }
+        // Trường hợp 2: trúng cả 2 con (logic giống xiên thường)
+        else if (hitCount === 2) {
+          const multiplierData = await getMultiplierByStore(storeId, 'xien2_full');
+          if (multiplierData) {
+            bestMultiplier = multiplierData.multiplier;
+            bestDescription = 'Xiên nháy - Trúng cả 2 số';
+            bestBetType = 'xien2_full';
+            console.log(`[XIEN DEBUG] ---> Xiên nháy trường hợp 2: dùng hệ số xiên 2 trúng đầy đủ`);
+          }
+        }
+      }
     } else if (n === 3) {
       // Xiên 3
       if (hitCount === 3) {
@@ -807,13 +833,14 @@ const calculateXienPrize = async (invoiceItem, lotteryResult, storeId) => {
       
       totalWinnings.push({
         betType: bestBetType,
-        betTypeLabel: `Xiên ${n}`,
+        betTypeLabel: invoiceItem.isXienNhay ? `Xiên ${n} nháy` : `Xiên ${n}`,
         numbers: betNumbers.join(', '),
         betAmount: betAmount,
         winningCount: hitCount,
         multiplier: bestMultiplier,
         prizeAmount: winningAmount,
-        detailString: `${bestDescription}: ${betAmount}n x ${bestMultiplier} = ${winningAmount.toLocaleString('vi-VN')} đ`
+        detailString: `${bestDescription}: ${betAmount}n x ${bestMultiplier} = ${winningAmount.toLocaleString('vi-VN')} đ`,
+        isXienNhay: invoiceItem.isXienNhay || false
       });
       
       console.log(`[XIEN DEBUG] ---> Xiên ${i + 1} trúng! Thưởng: ${winningAmount} VNĐ`);
