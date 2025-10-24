@@ -270,14 +270,15 @@ const getAdminPrizeStatistics = async (req, res) => {
                   count: 0,
                   totalBetAmount: 0,
                   totalPrize: 0,
-                  multiplier: multiplier
+                  multiplier: multiplier // Chỉ để hiển thị, không dùng để tính toán
                 };
               }
               
               statistics['2s'].winningNumbers[winningNumber].count += 1;
               statistics['2s'].winningNumbers[winningNumber].totalBetAmount += betAmount;
-              // Tính lại totalPrize dựa trên tổng betAmount và multiplier
-              statistics['2s'].winningNumbers[winningNumber].totalPrize = statistics['2s'].winningNumbers[winningNumber].totalBetAmount * statistics['2s'].winningNumbers[winningNumber].multiplier * 1000;
+              // Cộng trực tiếp prizeAmount thực tế thay vì tính lại với multiplier
+              // Điều này đảm bảo tính đúng khi các cửa hàng có hệ số thưởng khác nhau
+              statistics['2s'].winningNumbers[winningNumber].totalPrize += prizeAmount;
             }
 
           } else if (betType.startsWith('3s')) {

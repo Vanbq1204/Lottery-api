@@ -276,8 +276,9 @@ const getStorePrizeStatistics = async (req, res) => {
               
               statistics['2s'].winningNumbers[winningNumber].count += 1;
               statistics['2s'].winningNumbers[winningNumber].totalBetAmount += betAmount;
-              // Tính lại totalPrize dựa trên tổng betAmount và multiplier
-              statistics['2s'].winningNumbers[winningNumber].totalPrize = statistics['2s'].winningNumbers[winningNumber].totalBetAmount * statistics['2s'].winningNumbers[winningNumber].multiplier * 1000;
+              // Cộng trực tiếp prizeAmount thực tế thay vì tính lại với multiplier
+              // Điều này đảm bảo tính đúng khi các cửa hàng có hệ số thưởng khác nhau
+              statistics['2s'].winningNumbers[winningNumber].totalPrize += prizeAmount;
             }
             break;
 

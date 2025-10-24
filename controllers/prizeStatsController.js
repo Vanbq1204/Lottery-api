@@ -251,8 +251,9 @@ const analyze2sItem = (item, stats2s) => {
     
     stats2s.winningNumbers[winningNumber].count += 1;
     stats2s.winningNumbers[winningNumber].totalBetAmount += item.betAmount;
-    // Tính lại totalPrize dựa trên tổng betAmount và multiplier
-    stats2s.winningNumbers[winningNumber].totalPrize = stats2s.winningNumbers[winningNumber].totalBetAmount * stats2s.winningNumbers[winningNumber].multiplier * 1000;
+    // Cộng trực tiếp prizeAmount thực tế thay vì tính lại với multiplier
+    // Điều này đảm bảo tính đúng khi các cửa hàng có hệ số thưởng khác nhau
+    stats2s.winningNumbers[winningNumber].totalPrize += item.prizeAmount;
     stats2s.totalWinningNumbers += 1;
   }
   
