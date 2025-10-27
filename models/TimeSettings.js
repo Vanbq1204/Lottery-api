@@ -20,6 +20,16 @@ const timeSettingsSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Thời gian giới hạn cho lô, xiên, xiên quay (chung)
+  specialBetsCutoffTime: {
+    type: String, // Format: "HH:MM" (24h format)
+    default: "18:15"
+  },
+  // Trạng thái kích hoạt giới hạn cho lô, xiên, xiên quay
+  specialBetsLimitActive: {
+    type: Boolean,
+    default: false
+  },
   timezone: {
     type: String,
     default: "Asia/Ho_Chi_Minh"

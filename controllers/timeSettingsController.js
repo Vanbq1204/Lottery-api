@@ -40,7 +40,10 @@ const updateTimeSettings = async (req, res) => {
       bettingCutoffTime, 
       isActive, 
       editDeleteCutoffTime, 
-      editDeleteLimitActive 
+      editDeleteLimitActive,
+      // Thêm trường chung cho lô, xiên, xiên quay
+      specialBetsCutoffTime,
+      specialBetsLimitActive
     } = req.body;
     
     // Validate time format (HH:MM)
@@ -57,6 +60,14 @@ const updateTimeSettings = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Định dạng thời gian giới hạn sửa/xóa không hợp lệ. Vui lòng sử dụng định dạng HH:MM (24h)'
+      });
+    }
+    
+    // Validate thời gian lô, xiên, xiên quay
+    if (specialBetsCutoffTime && !timeRegex.test(specialBetsCutoffTime)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Định dạng thời gian giới hạn lô, xiên, xiên quay không hợp lệ. Vui lòng sử dụng định dạng HH:MM (24h)'
       });
     }
     
@@ -77,6 +88,15 @@ const updateTimeSettings = async (req, res) => {
         timeSettings.editDeleteLimitActive = editDeleteLimitActive;
       }
       
+      // Cập nhật thời gian và trạng thái cho lô, xiên, xiên quay (chung)
+      if (specialBetsCutoffTime) {
+        timeSettings.specialBetsCutoffTime = specialBetsCutoffTime;
+      }
+      
+      if (specialBetsLimitActive !== undefined) {
+        timeSettings.specialBetsLimitActive = specialBetsLimitActive;
+      }
+      
       timeSettings.updatedBy = adminId;
       await timeSettings.save();
     } else {
@@ -87,6 +107,9 @@ const updateTimeSettings = async (req, res) => {
         isActive: isActive !== undefined ? isActive : true,
         editDeleteCutoffTime: editDeleteCutoffTime || "18:15",
         editDeleteLimitActive: editDeleteLimitActive !== undefined ? editDeleteLimitActive : false,
+        // Thêm trường chung
+        specialBetsCutoffTime: specialBetsCutoffTime || "18:15",
+        specialBetsLimitActive: specialBetsLimitActive !== undefined ? specialBetsLimitActive : false,
         updatedBy: adminId
       });
       await timeSettings.save();

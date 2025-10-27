@@ -2,7 +2,8 @@ const Invoice = require('../models/Invoice');
 const InvoiceHistory = require('../models/InvoiceHistory');
 const Store = require('../models/Store');
 const User = require('../models/User');
-const { getVietnamDayRange } = require('../utils/dateUtils');
+const TimeSettings = require('../models/TimeSettings');
+const { getVietnamDayRange, getCurrentVietnamTime, isBeforeCutoffTime } = require('../utils/dateUtils');
 
 // Lưu hóa đơn mới
 const saveInvoice = async (req, res) => {
@@ -37,6 +38,31 @@ const saveInvoice = async (req, res) => {
     const store = await Store.findById(employee.storeId).populate('adminId');
     if (!store) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy cửa hàng' });
+    }
+
+    // Lấy cài đặt thời gian để kiểm tra validation
+    const timeSettings = await TimeSettings.findOne({ adminId: store.adminId._id });
+    
+    // Kiểm tra thời gian cho lô, xiên, xiên quay
+    const specialBetTypes = ['loto', 'xien', 'xienquay'];
+    
+    if (timeSettings && timeSettings.specialBetsLimitActive) {
+      // Kiểm tra xem có item nào thuộc loại special bet types không
+      const hasSpecialBets = items.some(item => specialBetTypes.includes(item.betType));
+      
+      if (hasSpecialBets) {
+        const allowed = isBeforeCutoffTime(timeSettings.specialBetsCutoffTime);
+        if (!allowed) {
+          const currentTime = getCurrentVietnamTime();
+          return res.status(403).json({
+            success: false,
+            message: `Không thể lưu hóa đơn vì có cược lô, xiên, xiên quay đã quá thời gian quy định (${timeSettings.specialBetsCutoffTime}). Hiện tại: ${currentTime}`,
+            cutoffTime: timeSettings.specialBetsCutoffTime,
+            currentTime: currentTime,
+            code: 'SPECIAL_BETS_TIME_EXPIRED'
+          });
+        }
+      }
     }
 
     // Tạo hóa đơn mới

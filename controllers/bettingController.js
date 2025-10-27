@@ -1,6 +1,8 @@
 const Betting = require('../models/Betting');
 const Store = require('../models/Store');
 const User = require('../models/User');
+const TimeSettings = require('../models/TimeSettings');
+const { getCurrentVietnamTime, isBeforeCutoffTime } = require('../utils/dateUtils');
 
 // Gửi cược
 const submitBets = async (req, res) => {
@@ -33,9 +35,13 @@ const submitBets = async (req, res) => {
       });
     }
 
+    // Lấy cài đặt thời gian của admin để kiểm tra giới hạn cho lô, xiên, xiên quay
+    const timeSettings = await TimeSettings.findOne({ adminId: store.adminId });
+
     // Chuẩn bị dữ liệu cược
     const bettingRecords = [];
     let calculatedTotal = 0;
+    const specialBetTypes = ['lo2so', 'lo3so', 'lo4so', 'xien2', 'xien3', 'xien4', 'xiendau', 'xienduoi', 'xiendacbiet', 'xiengiai1', 'xiengiai2', 'xiengiai3', 'xiengiai4', 'xiengiai5', 'xiengiai6', 'xiengiai7', 'xienquay'];
 
     for (const bet of bets) {
       // Validate từng cược
@@ -51,6 +57,21 @@ const submitBets = async (req, res) => {
           success: false,
           message: 'Số tiền cược tối thiểu là 1,000 VNĐ'
         });
+      }
+
+      // Kiểm tra thời gian cho lô, xiên, xiên quay
+      if (timeSettings && timeSettings.specialBetsLimitActive && specialBetTypes.includes(bet.betType)) {
+        const allowed = isBeforeCutoffTime(timeSettings.specialBetsCutoffTime);
+        if (!allowed) {
+          const currentTime = getCurrentVietnamTime();
+          return res.status(403).json({
+            success: false,
+            message: `Không thể nhập cược ${bet.betType} vì đã quá thời gian quy định (${timeSettings.specialBetsCutoffTime}). Hiện tại: ${currentTime}`,
+            cutoffTime: timeSettings.specialBetsCutoffTime,
+            currentTime: currentTime,
+            code: 'SPECIAL_BETS_TIME_EXPIRED'
+          });
+        }
       }
 
       calculatedTotal += parseInt(bet.amount);
@@ -267,4 +288,4 @@ module.exports = {
   submitBets,
   getEmployeeBets,
   getStoreBets
-}; 
+};
