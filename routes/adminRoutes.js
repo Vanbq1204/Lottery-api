@@ -6,7 +6,9 @@ const { getAdminPrizeStatistics } = require('../controllers/adminPrizeStatsContr
 const { getStorePrizeStatistics } = require('../controllers/adminStorePrizeStatsController');
 const { getTimeSettings, updateTimeSettings, checkBettingAllowed } = require('../controllers/timeSettingsController');
 const { getCleanupStats, performCleanup } = require('../controllers/dataCleanupController');
-const { authenticateToken } = require('../controllers/authController');
+const { exportMessages, getExportHistory, reexportSnapshot } = require('../controllers/messageExportController');
+const { listRequests: listInvoiceChangeRequests, decideRequest: decideInvoiceChangeRequest } = require('../controllers/invoiceChangeRequestController');
+const { authenticateToken, changePassword } = require('../controllers/authController');
 
 // Middleware kiểm tra quyền admin
 const requireAdmin = (req, res, next) => {
@@ -45,5 +47,17 @@ router.get('/check-betting-allowed', checkBettingAllowed);
 // Route cho chức năng làm sạch dữ liệu
 router.get('/data-cleanup/stats', authenticateToken, requireAdmin, getCleanupStats);
 router.delete('/data-cleanup', authenticateToken, requireAdmin, performCleanup);
+
+// Routes xuất tin nhắn theo khoảng thời gian và lịch sử
+router.post('/message-exports/export', authenticateToken, requireAdmin, exportMessages);
+router.get('/message-exports/history', authenticateToken, requireAdmin, getExportHistory);
+router.put('/message-exports/reexport/:snapshotId', authenticateToken, requireAdmin, reexportSnapshot);
+
+// Đổi mật khẩu admin (tự đổi)
+router.put('/change-password', authenticateToken, requireAdmin, changePassword);
+
+// Danh sách yêu cầu chỉnh sửa/xóa hóa đơn và phê duyệt
+router.get('/invoice-change-requests', authenticateToken, requireAdmin, listInvoiceChangeRequests);
+router.put('/invoice-change-requests/:requestId', authenticateToken, requireAdmin, decideInvoiceChangeRequest);
 
 module.exports = router;

@@ -111,4 +111,19 @@ userSchema.methods.toJSON = function() {
   return userObject;
 };
 
-module.exports = mongoose.model('User', userSchema); 
+// Quyền hiển thị UI
+// Cho phép đổi mật khẩu (áp dụng mọi role)
+if (!module.exports?.schema?.path('allowChangePassword')) {
+  userSchema.add({
+    allowChangePassword: { type: Boolean, default: true }
+  });
+}
+
+// Cho phép sử dụng Xuất tin nhắn (áp dụng chủ yếu cho admin)
+if (!module.exports?.schema?.path('allowMessageExport')) {
+  userSchema.add({
+    allowMessageExport: { type: Boolean, default: true }
+  });
+}
+
+module.exports = mongoose.model('User', userSchema);

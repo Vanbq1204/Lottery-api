@@ -28,7 +28,7 @@ const getStoresByAdmin = async (req, res) => {
     const stores = await Store.find({ adminId: new mongoose.Types.ObjectId(adminId) })
       .populate({
         path: 'employees',
-        select: 'username name email isActive'
+        select: 'username name email isActive allowChangePassword'
       });
     
     const storesWithEmployees = stores.map(store => {
@@ -42,6 +42,7 @@ const getStoresByAdmin = async (req, res) => {
         employeeName: employee?.name || 'Chưa có nhân viên',
         employeeUsername: employee?.username || '',
         employeeId: employee?._id || null,
+        allowChangePassword: employee?.allowChangePassword ?? true,
         createdAt: store.createdAt,
         updatedAt: store.updatedAt
       };
@@ -73,7 +74,8 @@ const createStore = async (req, res) => {
       storeName, 
       storeAddress, 
       storePhone, 
-      isActive 
+      isActive,
+      allowChangePassword
     } = req.body;
     
     // Validate input
@@ -128,6 +130,7 @@ const createStore = async (req, res) => {
       storeId: newStore._id,
       storeName: newStore.name,
       isActive: isActive !== undefined ? isActive : true,
+      allowChangePassword: allowChangePassword !== undefined ? !!allowChangePassword : true,
       createdBy: new mongoose.Types.ObjectId(superAdminId)
     });
     
@@ -185,7 +188,7 @@ const updateStore = async (req, res) => {
   try {
     const { storeId } = req.params;
     const superAdminId = req.user.id;
-    const { employeeName, storeName, storeAddress, storePhone, password, isActive } = req.body;
+    const { employeeName, storeName, storeAddress, storePhone, password, isActive, allowChangePassword } = req.body;
     
     // Validate input
     if (!employeeName || !storeName) {
@@ -227,6 +230,7 @@ const updateStore = async (req, res) => {
         employee.storeName = storeName;
         if (password) employee.password = password; // Sẽ được hash tự động
         if (isActive !== undefined) employee.isActive = isActive;
+        if (allowChangePassword !== undefined) employee.allowChangePassword = !!allowChangePassword;
         await employee.save();
       }
     }
@@ -293,4 +297,4 @@ module.exports = {
   createStore,
   updateStore,
   deleteStore
-}; 
+};

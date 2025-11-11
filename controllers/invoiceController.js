@@ -4,6 +4,7 @@ const Store = require('../models/Store');
 const User = require('../models/User');
 const TimeSettings = require('../models/TimeSettings');
 const { getVietnamDayRange, getCurrentVietnamTime, isBeforeCutoffTime } = require('../utils/dateUtils');
+const MessageExportSnapshot = require('../models/MessageExportSnapshot');
 
 // Lưu hóa đơn mới
 const saveInvoice = async (req, res) => {
@@ -571,6 +572,27 @@ const editInvoice = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Không có quyền sửa hóa đơn này' });
     }
 
+    // Khóa sửa nếu hóa đơn đã nằm trong phạm vi lần xuất tin nhắn của admin
+    const lockedSnapshot = await MessageExportSnapshot.findOne({
+      adminId: existingInvoice.adminId,
+      startTime: { $lte: existingInvoice.printedAt },
+      endTime: { $gte: existingInvoice.printedAt }
+    });
+    if (lockedSnapshot) {
+      // Cho phép nếu admin đã duyệt yêu cầu
+      const InvoiceChangeRequest = require('../models/InvoiceChangeRequest');
+      const approvedReq = await InvoiceChangeRequest.findOne({ invoiceId: existingInvoice.invoiceId, status: 'approved' });
+      if (approvedReq) {
+        // continue to edit
+      } else {
+        return res.status(403).json({
+          success: false,
+          code: 'INVOICE_LOCKED_BY_MESSAGE_EXPORT',
+          message: `Hóa đơn đã được xuất tin nhắn (Lần ${lockedSnapshot.sequence} ngày ${lockedSnapshot.date}). Không thể sửa.`
+        });
+      }
+    }
+
     // Lưu dữ liệu cũ để so sánh
     const oldData = {
       customerName: existingInvoice.customerName,
@@ -670,6 +692,26 @@ const deleteInvoice = async (req, res) => {
     // Kiểm tra quyền xóa (chỉ cùng store)
     if (existingInvoice.storeId.toString() !== employee.storeId.toString()) {
       return res.status(403).json({ success: false, message: 'Không có quyền xóa hóa đơn này' });
+    }
+
+    // Khóa xóa nếu hóa đơn đã nằm trong phạm vi lần xuất tin nhắn của admin
+    const lockedSnapshot = await MessageExportSnapshot.findOne({
+      adminId: existingInvoice.adminId,
+      startTime: { $lte: existingInvoice.printedAt },
+      endTime: { $gte: existingInvoice.printedAt }
+    });
+    if (lockedSnapshot) {
+      const InvoiceChangeRequest = require('../models/InvoiceChangeRequest');
+      const approvedReq = await InvoiceChangeRequest.findOne({ invoiceId: existingInvoice.invoiceId, status: 'approved' });
+      if (approvedReq) {
+        // continue to delete
+      } else {
+        return res.status(403).json({
+          success: false,
+          code: 'INVOICE_LOCKED_BY_MESSAGE_EXPORT',
+          message: `Hóa đơn đã được xuất tin nhắn (Lần ${lockedSnapshot.sequence} ngày ${lockedSnapshot.date}). Không thể xóa.`
+        });
+      }
     }
 
     // Lưu dữ liệu cũ trước khi xóa

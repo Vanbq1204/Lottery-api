@@ -65,7 +65,9 @@ const login = async (req, res) => {
       phone: user.phone,
       role: user.role,
       storeName: user.storeName,
-      storeId: user.storeId
+      storeId: user.storeId,
+      allowChangePassword: user.allowChangePassword,
+      allowMessageExport: user.allowMessageExport
     };
 
     res.json({
@@ -174,10 +176,46 @@ const getProfile = async (req, res) => {
 // Middleware yêu cầu quyền admin
 
 
+// Đổi mật khẩu (dành cho user tự đổi) - xác thực mật khẩu cũ
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ mật khẩu cũ và mật khẩu mới' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
+    }
+
+    // Lấy user kèm password để so sánh
+    const user = await User.findById(userId).select('+password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+    }
+
+    const isValid = await user.comparePassword(oldPassword);
+    if (!isValid) {
+      return res.status(401).json({ success: false, message: 'Mật khẩu cũ không đúng' });
+    }
+
+    user.password = newPassword; // sẽ được hash qua pre('save')
+    await user.save();
+
+    res.json({ success: true, message: 'Đổi mật khẩu thành công' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server khi đổi mật khẩu' });
+  }
+};
+
 module.exports = {
   login,
   authenticateToken,
   requireRole,
 
-  getProfile
-}; 
+  getProfile,
+  changePassword
+};

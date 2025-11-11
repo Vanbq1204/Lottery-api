@@ -23,6 +23,8 @@ const getAllAdmins = async (req, res) => {
         name: admin.name,
         email: admin.email,
         isActive: admin.isActive,
+        allowChangePassword: admin.allowChangePassword,
+        allowMessageExport: admin.allowMessageExport,
         storeId: admin.storeId?._id,
         storeName: admin.storeId?.name,
         storeAddress: admin.storeId?.address,
@@ -43,7 +45,7 @@ const getAllAdmins = async (req, res) => {
 // Tạo tài khoản admin mới
 const createAdmin = async (req, res) => {
   try {
-    const { username, password, name, email, storeId } = req.body;
+    const { username, password, name, email, storeId, allowChangePassword, allowMessageExport } = req.body;
     const superAdminId = req.user.id;
     
     // Validate input
@@ -113,6 +115,10 @@ const createAdmin = async (req, res) => {
       adminData.storeId = new mongoose.Types.ObjectId(storeId);
     }
 
+    // Quyền UI
+    adminData.allowChangePassword = allowChangePassword !== undefined ? !!allowChangePassword : true;
+    adminData.allowMessageExport = allowMessageExport !== undefined ? !!allowMessageExport : true;
+
     console.log('Creating admin with data:', adminData);
     const newAdmin = new User(adminData);
     
@@ -154,7 +160,7 @@ const createAdmin = async (req, res) => {
 const updateAdmin = async (req, res) => {
   try {
     const { adminId } = req.params;
-    const { name, email, isActive, password } = req.body;
+    const { name, email, isActive, password, allowChangePassword, allowMessageExport } = req.body;
     const superAdminId = req.user.id;
     
     // Kiểm tra admin tồn tại và thuộc về superadmin này
@@ -209,6 +215,8 @@ const updateAdmin = async (req, res) => {
     if (email) adminToUpdate.email = email;
     if (password) adminToUpdate.password = password; // Plain password, sẽ được hash tự động
     if (isActive !== undefined) adminToUpdate.isActive = isActive;
+    if (allowChangePassword !== undefined) adminToUpdate.allowChangePassword = !!allowChangePassword;
+    if (allowMessageExport !== undefined) adminToUpdate.allowMessageExport = !!allowMessageExport;
     
     await adminToUpdate.save(); // Trigger pre('save') hook
     
@@ -314,4 +322,4 @@ module.exports = {
   createStore: storeController.createStore,
   updateStore: storeController.updateStore,
   deleteStore: storeController.deleteStore
-}; 
+};

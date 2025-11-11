@@ -39,4 +39,13 @@ router.post('/stores', authenticateToken, requireSuperAdmin, createStore);
 router.put('/stores/:storeId', authenticateToken, requireSuperAdmin, updateStore);
 router.delete('/stores/:storeId', authenticateToken, requireSuperAdmin, deleteStore);
 
-module.exports = router; 
+// Thống kê toàn bộ hệ thống (gộp theo admin)
+const { getSystemStatistics } = require('../controllers/superAdminSystemStatsController');
+const { getSuperAdminCleanupStats, performSuperAdminCleanup } = require('../controllers/superAdminCleanupController');
+router.get('/system-statistics', authenticateToken, requireSuperAdmin, getSystemStatistics);
+
+// Làm sạch dữ liệu theo ngày cho admin
+router.get('/cleanup/stats', authenticateToken, requireSuperAdmin, getSuperAdminCleanupStats);
+router.delete('/cleanup', authenticateToken, requireSuperAdmin, performSuperAdminCleanup);
+
+module.exports = router;
