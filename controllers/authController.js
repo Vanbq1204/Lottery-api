@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-here';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const GlobalSettings = require('../models/GlobalSettings');
 
 // Tạo JWT token
 const generateToken = (userId) => {
@@ -115,6 +116,20 @@ const authenticateToken = async (req, res, next) => {
         success: false,
         message: 'Tài khoản đã bị khóa'
       });
+    }
+
+    // Kiểm tra yêu cầu đăng nhập lại (force relogin) - miễn trừ Super Admin
+    try {
+      const settings = await GlobalSettings.findOne({ key: 'global' });
+      if (settings?.forceReloginAt && user.role !== 'superadmin') {
+        const forcedAtSec = Math.floor(new Date(settings.forceReloginAt).getTime() / 1000);
+        const tokenIssuedAtSec = decoded.iat || 0; // iat mặc định của JWT
+        if (tokenIssuedAtSec < forcedAtSec) {
+          return res.status(401).json({ success: false, message: 'Yêu cầu đăng nhập lại' });
+        }
+      }
+    } catch (e) {
+      // Nếu lỗi khi đọc settings thì bỏ qua, không chặn
     }
 
     req.user = user;

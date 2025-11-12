@@ -234,7 +234,14 @@ const updateAdmin = async (req, res) => {
   }
 };
 
-// Xóa admin
+const Invoice = require('../models/Invoice');
+const WinningInvoice = require('../models/WinningInvoice');
+const MessageExportSnapshot = require('../models/MessageExportSnapshot');
+const PrizeMultiplier = require('../models/PrizeMultiplier');
+const LotoMultiplier = require('../models/LotoMultiplier');
+const TimeSettings = require('../models/TimeSettings');
+
+// Xóa admin (cascading): xóa stores, employees, invoices (cược & thưởng), lịch sử xuất, hệ số thưởng/lô, thiết lập thời gian
 const deleteAdmin = async (req, res) => {
   try {
     const { adminId } = req.params;
@@ -254,20 +261,44 @@ const deleteAdmin = async (req, res) => {
       });
     }
     
-    // Xóa adminId khỏi store
-    if (admin.storeId) {
-      await Store.updateOne(
-        { _id: admin.storeId },
-        { $unset: { adminId: "" } }
-      );
+    // Lấy tất cả stores của admin
+    const stores = await Store.find({ adminId: admin._id }).select('_id');
+    const storeIds = stores.map(s => s._id);
+
+    // Xóa toàn bộ employees thuộc các store
+    if (storeIds.length > 0) {
+      await User.deleteMany({ role: 'employee', storeId: { $in: storeIds } });
     }
-    
-    // Xóa admin
-    await User.deleteOne({ _id: adminId });
-    
+
+    // Xóa invoices và winning invoices thuộc các store
+    if (storeIds.length > 0) {
+      await Invoice.deleteMany({ storeId: { $in: storeIds } });
+      await WinningInvoice.deleteMany({ storeId: { $in: storeIds } });
+    }
+
+    // Xóa hệ số thưởng/lô theo store
+    if (storeIds.length > 0) {
+      await PrizeMultiplier.deleteMany({ storeId: { $in: storeIds } });
+      await LotoMultiplier.deleteMany({ storeId: { $in: storeIds } });
+    }
+
+    // Xóa lịch sử xuất tin nhắn theo admin
+    await MessageExportSnapshot.deleteMany({ adminId: admin._id });
+
+    // Xóa thiết lập thời gian theo admin
+    await TimeSettings.deleteOne({ adminId: admin._id });
+
+    // Xóa stores của admin
+    if (storeIds.length > 0) {
+      await Store.deleteMany({ _id: { $in: storeIds } });
+    }
+
+    // Cuối cùng xóa admin
+    await User.deleteOne({ _id: admin._id });
+
     res.json({
       success: true,
-      message: 'Xóa admin thành công'
+      message: 'Đã xóa admin và toàn bộ dữ liệu liên quan'
     });
     
   } catch (error) {

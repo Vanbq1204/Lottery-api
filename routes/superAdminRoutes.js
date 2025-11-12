@@ -40,12 +40,18 @@ router.put('/stores/:storeId', authenticateToken, requireSuperAdmin, updateStore
 router.delete('/stores/:storeId', authenticateToken, requireSuperAdmin, deleteStore);
 
 // Thống kê toàn bộ hệ thống (gộp theo admin)
-const { getSystemStatistics } = require('../controllers/superAdminSystemStatsController');
+const { getSystemStatistics, getAdminStoreStatistics } = require('../controllers/superAdminSystemStatsController');
+const { getForceReloginStatus, forceRelogin } = require('../controllers/superAdminSessionController');
 const { getSuperAdminCleanupStats, performSuperAdminCleanup } = require('../controllers/superAdminCleanupController');
 router.get('/system-statistics', authenticateToken, requireSuperAdmin, getSystemStatistics);
+router.get('/system-statistics/stores', authenticateToken, requireSuperAdmin, getAdminStoreStatistics);
 
 // Làm sạch dữ liệu theo ngày cho admin
 router.get('/cleanup/stats', authenticateToken, requireSuperAdmin, getSuperAdminCleanupStats);
 router.delete('/cleanup', authenticateToken, requireSuperAdmin, performSuperAdminCleanup);
+
+// Yêu cầu đăng nhập lại toàn hệ thống
+router.get('/session/force-relogin/status', authenticateToken, requireSuperAdmin, getForceReloginStatus);
+router.post('/session/force-relogin', authenticateToken, requireSuperAdmin, forceRelogin);
 
 module.exports = router;

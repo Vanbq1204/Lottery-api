@@ -15,14 +15,21 @@ const getCurrentVietnamDateStr = () => {
   return `${y}-${m}-${d}`;
 };
 
-// Enforce retention: keep 2 latest days (today and yesterday)
+// Retention rule: KEEP only today and yesterday; other days can be deleted
 const isDateDeletable = (dateStr) => {
-  const vnStr = getCurrentVietnamDateStr();
-  const today = new Date(`${vnStr}T00:00:00+07:00`);
-  const retention = new Date(today);
-  retention.setDate(today.getDate() - 2); // two days ago
-  const target = new Date(`${dateStr}T00:00:00+07:00`);
-  return target < retention; // only dates strictly earlier than two days ago
+  const todayVN = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
+  const y = todayVN.getFullYear();
+  const m = String(todayVN.getMonth() + 1).padStart(2, '0');
+  const d = String(todayVN.getDate()).padStart(2, '0');
+  const todayStr = `${y}-${m}-${d}`;
+  const yesterdayVN = new Date(todayVN);
+  yesterdayVN.setDate(todayVN.getDate() - 1);
+  const yy = yesterdayVN.getFullYear();
+  const ym = String(yesterdayVN.getMonth() + 1).padStart(2, '0');
+  const yd = String(yesterdayVN.getDate()).padStart(2, '0');
+  const yesterdayStr = `${yy}-${ym}-${yd}`;
+  // Not deletable if selecting today or yesterday
+  return (dateStr !== todayStr && dateStr !== yesterdayStr);
 };
 
 // GET /api/superadmin/cleanup/stats?adminId=...&date=YYYY-MM-DD
@@ -55,12 +62,13 @@ const getSuperAdminCleanupStats = async (req, res) => {
 
     const totalInvoices = await Invoice.countDocuments({ storeId: { $in: storeIds }, createdAt: { $gte: startOfDay, $lte: endOfDay } });
     const totalWinningInvoices = await WinningInvoice.countDocuments({ storeId: { $in: storeIds }, createdAt: { $gte: startOfDay, $lte: endOfDay } });
+    const totalSnapshots = await require('../models/MessageExportSnapshot').countDocuments({ adminId: admin._id, date });
 
     const affectedStoresInvoices = await Invoice.distinct('storeId', { storeId: { $in: storeIds }, createdAt: { $gte: startOfDay, $lte: endOfDay } });
     const affectedStoresWinning = await WinningInvoice.distinct('storeId', { storeId: { $in: storeIds }, createdAt: { $gte: startOfDay, $lte: endOfDay } });
     const affectedStores = new Set([...affectedStoresInvoices, ...affectedStoresWinning]).size;
 
-    return res.json({ success: true, stats: { totalInvoices, totalWinningInvoices, affectedStores } });
+    return res.json({ success: true, stats: { totalInvoices, totalWinningInvoices, totalSnapshots, affectedStores } });
   } catch (error) {
     console.error('SuperAdmin cleanup stats error:', error);
     return res.status(500).json({ success: false, message: 'Lỗi server khi lấy thống kê dữ liệu' });
@@ -96,8 +104,9 @@ const performSuperAdminCleanup = async (req, res) => {
 
     const deletedInvoicesResult = await Invoice.deleteMany({ storeId: { $in: storeIds }, createdAt: { $gte: startOfDay, $lte: endOfDay } });
     const deletedWinningInvoicesResult = await WinningInvoice.deleteMany({ storeId: { $in: storeIds }, createdAt: { $gte: startOfDay, $lte: endOfDay } });
+    const deletedSnapshotsResult = await require('../models/MessageExportSnapshot').deleteMany({ adminId: admin._id, date });
 
-    return res.json({ success: true, message: 'Xóa dữ liệu thành công', deletedInvoices: deletedInvoicesResult.deletedCount, deletedWinningInvoices: deletedWinningInvoicesResult.deletedCount });
+    return res.json({ success: true, message: 'Xóa dữ liệu thành công', deletedInvoices: deletedInvoicesResult.deletedCount, deletedWinningInvoices: deletedWinningInvoicesResult.deletedCount, deletedSnapshots: deletedSnapshotsResult.deletedCount });
   } catch (error) {
     console.error('SuperAdmin perform cleanup error:', error);
     return res.status(500).json({ success: false, message: 'Lỗi server khi xóa dữ liệu' });

@@ -274,6 +274,18 @@ const deleteStore = async (req, res) => {
     
     // Xóa tất cả employees trong store
     await User.deleteMany({ _id: { $in: store.employees } });
+
+    // Xóa hóa đơn cược và thưởng thuộc store
+    const Invoice = require('../models/Invoice');
+    const WinningInvoice = require('../models/WinningInvoice');
+    await Invoice.deleteMany({ storeId: store._id });
+    await WinningInvoice.deleteMany({ storeId: store._id });
+
+    // Xóa hệ số thưởng và hệ số lô của store
+    const PrizeMultiplier = require('../models/PrizeMultiplier');
+    const LotoMultiplier = require('../models/LotoMultiplier');
+    await PrizeMultiplier.deleteMany({ storeId: store._id });
+    await LotoMultiplier.deleteMany({ storeId: store._id });
     
     // Xóa store
     await Store.deleteOne({ _id: storeId });
