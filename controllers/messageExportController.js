@@ -103,11 +103,16 @@ const aggregateStatsForWindow = async (adminId, startTime, endTime) => {
 };
 
 // Build message strings from stats
-const buildMessages = (stats) => {
+const buildMessages = (stats, options = {}) => {
+  const multiplierInput = typeof options.multiplier === 'number' ? options.multiplier : 1;
+  const multiplier = Math.max(1, multiplierInput); // tối thiểu 1
+
   const groupLine = (label, map) => {
     const byAmount = new Map();
     Object.entries(map || {}).forEach(([k, v]) => {
-      const a = parseInt(v) || 0; if (a <= 0) return;
+      let a = parseInt(v) || 0; if (a <= 0) return;
+      // áp dụng hệ số gửi đi cho tất cả nhóm ngoại trừ lô
+      a = Math.round(a * multiplier);
       if (!byAmount.has(a)) byAmount.set(a, []);
       byAmount.get(a).push(k);
     });
@@ -161,7 +166,7 @@ const buildMessages = (stats) => {
 const exportMessages = async (req, res) => {
   try {
     const adminId = req.user.id;
-    const { date, time } = req.body; // date: YYYY-MM-DD, time: HH:MM optional
+    const { date, time, multiplier } = req.body; // date: YYYY-MM-DD, time: HH:MM optional, multiplier optional
     const { startOfDay } = getVietnamDayRange(date);
     const endTime = parseVietnamEndTime(date, time);
 
@@ -171,7 +176,7 @@ const exportMessages = async (req, res) => {
 
     // Tính stats và dựng message
     const stats = await aggregateStatsForWindow(adminId, startTime, endTime);
-    const messages = buildMessages(stats);
+    const messages = buildMessages(stats, { multiplier: typeof multiplier === 'number' ? multiplier : 1.0 });
 
     // Tạo snapshot mới
     const seq = (last?.sequence || 0) + 1;
@@ -215,6 +220,7 @@ const reexportSnapshot = async (req, res) => {
   try {
     const adminId = req.user.id;
     const { snapshotId } = req.params;
+    const { multiplier } = req.body || {};
 
     const snapshot = await MessageExportSnapshot.findById(snapshotId);
     if (!snapshot || snapshot.adminId.toString() !== adminId.toString()) {
@@ -223,7 +229,7 @@ const reexportSnapshot = async (req, res) => {
 
     // Recompute messages for the same time window
     const stats = await aggregateStatsForWindow(adminId, snapshot.startTime, snapshot.endTime);
-    const messages = buildMessages(stats);
+    const messages = buildMessages(stats, { multiplier: typeof multiplier === 'number' ? multiplier : 1.0 });
 
     snapshot.messages = messages;
     await snapshot.save();
