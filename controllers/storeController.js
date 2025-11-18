@@ -40,7 +40,6 @@ const getStoresByAdmin = async (req, res) => {
         phone: store.phone,
         isActive: store.isActive,
         showLotteryResults: !!store.showLotteryResults,
-        showQuickLotteryResults: !!store.showQuickLotteryResults,
         employeeName: employee?.name || 'Chưa có nhân viên',
         employeeUsername: employee?.username || '',
         employeeId: employee?._id || null,
@@ -78,8 +77,7 @@ const createStore = async (req, res) => {
       storePhone, 
       isActive,
       allowChangePassword,
-      showLotteryResults,
-      showQuickLotteryResults
+      showLotteryResults
     } = req.body;
     
     // Validate input
@@ -120,8 +118,7 @@ const createStore = async (req, res) => {
       phone: storePhone || '',
       adminId: new mongoose.Types.ObjectId(adminId),
       isActive: isActive !== undefined ? isActive : true,
-      showLotteryResults: !!showLotteryResults,
-      showQuickLotteryResults: !!showQuickLotteryResults
+      showLotteryResults: !!showLotteryResults
     });
     
     await newStore.save();
@@ -176,7 +173,6 @@ const createStore = async (req, res) => {
         phone: newStore.phone,
         isActive: newStore.isActive,
         showLotteryResults: newStore.showLotteryResults,
-        showQuickLotteryResults: newStore.showQuickLotteryResults,
         employeeName: newEmployee.name,
         employeeUsername: newEmployee.username
       }
@@ -196,7 +192,7 @@ const updateStore = async (req, res) => {
   try {
     const { storeId } = req.params;
     const superAdminId = req.user.id;
-    const { employeeName, storeName, storeAddress, storePhone, password, isActive, allowChangePassword, showLotteryResults, showQuickLotteryResults } = req.body;
+    const { employeeName, storeName, storeAddress, storePhone, password, isActive, allowChangePassword, showLotteryResults } = req.body;
     
     // Validate input
     if (!employeeName || !storeName) {
@@ -229,7 +225,6 @@ const updateStore = async (req, res) => {
     store.phone = storePhone || '';
     if (isActive !== undefined) store.isActive = isActive;
     if (showLotteryResults !== undefined) store.showLotteryResults = !!showLotteryResults;
-    if (showQuickLotteryResults !== undefined) store.showQuickLotteryResults = !!showQuickLotteryResults;
     await store.save();
     
     // Cập nhật employee (nhân viên đầu tiên trong danh sách)

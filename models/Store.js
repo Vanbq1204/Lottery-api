@@ -35,10 +35,6 @@ const storeSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  showQuickLotteryResults: {
-    type: Boolean,
-    default: false
-  },
   // Thống kê
   totalBetsToday: {
     type: Number,
