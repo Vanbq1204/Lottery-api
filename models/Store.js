@@ -30,6 +30,15 @@ const storeSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  // Quyền hiển thị các tab kết quả trong giao diện nhân viên
+  showLotteryResults: {
+    type: Boolean,
+    default: false
+  },
+  showQuickLotteryResults: {
+    type: Boolean,
+    default: false
+  },
   // Thống kê
   totalBetsToday: {
     type: Number,
@@ -47,4 +56,4 @@ const storeSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Store', storeSchema); 
+module.exports = mongoose.model('Store', storeSchema);

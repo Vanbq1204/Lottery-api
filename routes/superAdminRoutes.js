@@ -43,8 +43,12 @@ router.delete('/stores/:storeId', authenticateToken, requireSuperAdmin, deleteSt
 const { getSystemStatistics, getAdminStoreStatistics } = require('../controllers/superAdminSystemStatsController');
 const { getForceReloginStatus, forceRelogin } = require('../controllers/superAdminSessionController');
 const { getSuperAdminCleanupStats, performSuperAdminCleanup } = require('../controllers/superAdminCleanupController');
+const { getLotteryHistory, deleteLotteryHistoryByDate } = require('../controllers/superAdminLotteryHistoryController');
 router.get('/system-statistics', authenticateToken, requireSuperAdmin, getSystemStatistics);
 router.get('/system-statistics/stores', authenticateToken, requireSuperAdmin, getAdminStoreStatistics);
+// Lịch sử hệ thống: lịch sử kết quả xổ số
+router.get('/system-history/lottery', authenticateToken, requireSuperAdmin, getLotteryHistory);
+router.delete('/system-history/lottery', authenticateToken, requireSuperAdmin, deleteLotteryHistoryByDate);
 
 // Làm sạch dữ liệu theo ngày cho admin
 router.get('/cleanup/stats', authenticateToken, requireSuperAdmin, getSuperAdminCleanupStats);

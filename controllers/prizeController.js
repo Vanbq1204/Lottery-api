@@ -1628,6 +1628,26 @@ const calculatePrizesForDate = async (req, res) => {
         }
       }
     }
+
+    // Xóa các hóa đơn thưởng không còn trúng theo kết quả mới (giữ nguyên trạng thái trả của hóa đơn còn trúng)
+    try {
+      const winnerFilter = {
+        lotteryDate: { $gte: startOfDay, $lte: endOfDay }
+      };
+      if (user && user.storeId) {
+        winnerFilter.storeId = user.storeId;
+      }
+      const existingWinners = await WinningInvoice.find(winnerFilter).select('originalInvoiceId');
+      const currentWinnerIds = new Set(winningInvoices.map(w => w.originalInvoiceId));
+      const losers = existingWinners.filter(w => !currentWinnerIds.has(w.originalInvoiceId));
+      if (losers.length > 0) {
+        const loserIds = losers.map(l => l._id);
+        await WinningInvoice.deleteMany({ _id: { $in: loserIds } });
+        console.log(`🧹 Đã xóa ${losers.length} hóa đơn thưởng không còn trúng trong ngày ${date}`);
+      }
+    } catch (cleanupErr) {
+      console.error('Cleanup non-winning invoices error:', cleanupErr);
+    }
     
     console.log(`🎉 [RESULT] Final result:`);
     console.log(`  - Total winning invoices: ${winningInvoices.length}`);
@@ -1639,7 +1659,7 @@ const calculatePrizesForDate = async (req, res) => {
     });
     
     res.json({
-      message: `Đã tính thưởng cho ${winningInvoices.length} hóa đơn`,
+      message: `Đã tính thưởng cho ${winningInvoices.length} hóa đơn (đã dọn dẹp hóa đơn không còn trúng nếu có)`,
       winningInvoices: winningInvoices
     });
     

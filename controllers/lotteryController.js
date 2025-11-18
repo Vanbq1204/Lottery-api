@@ -21,17 +21,69 @@ const saveLotteryResult = async (req, res) => {
     }
     console.log('Save lottery - openTimeDate:', openTimeDate);
 
+    // Permission: nếu là nhân viên, chỉ cho phép nếu cửa hàng được cấp quyền nhập kết quả
+    if (user.role === 'employee') {
+      const Store = require('../models/Store');
+      const store = await Store.findById(user.storeId);
+      if (!store || !store.showLotteryResults) {
+        return res.status(403).json({
+          success: false,
+          message: 'Cửa hàng không có quyền nhập kết quả xổ số'
+        });
+      }
+    }
+
     // Check if lottery result already exists for this turnNum (global, không phụ thuộc store)
     const existingResult = await LotteryResult.findOne({ turnNum });
     
+    const LotteryResultHistory = require('../models/LotteryResultHistory');
+
+    const toArray = (arr) => Array.isArray(arr) ? arr.map(x => (x || '').trim()) : [];
+    const normalizeResults = (r) => ({
+      gdb: (r?.gdb || '').trim(),
+      g1: (r?.g1 || '').trim(),
+      g2: toArray(r?.g2),
+      g3: toArray(r?.g3),
+      g4: toArray(r?.g4),
+      g5: toArray(r?.g5),
+      g6: toArray(r?.g6),
+      g7: toArray(r?.g7)
+    });
+
     if (existingResult) {
       // Update existing result
       existingResult.openTime = openTimeDate;
-      existingResult.results = results;
+      const before = normalizeResults(existingResult.results || {});
+      const after = normalizeResults(results || {});
+      existingResult.results = after;
       existingResult.createdBy = userId;
       
       await existingResult.save();
       
+      // Ghi lịch sử cập nhật
+      try {
+        let store, admin;
+        if (user.role === 'employee' && user.storeId) {
+          const Store = require('../models/Store');
+          store = await Store.findById(user.storeId).populate('adminId');
+        }
+        await LotteryResultHistory.create({
+          turnNum,
+          action: 'update',
+          changedBy: userId,
+          changedByName: user.name,
+          changedByUsername: user.username,
+          storeId: store?._id,
+          storeName: store?.name,
+          adminId: store?.adminId?._id,
+          adminName: store?.adminId?.name,
+          beforeResults: before,
+          afterResults: after
+        });
+      } catch (histErr) {
+        console.error('Write lottery history error:', histErr);
+      }
+
       return res.status(200).json({
         success: true,
         message: 'Cập nhật kết quả xổ số thành công',
@@ -39,15 +91,40 @@ const saveLotteryResult = async (req, res) => {
       });
     } else {
       // Create new result
+      const normalized = normalizeResults(results || {});
       const newLotteryResult = new LotteryResult({
         turnNum,
         openTime: openTimeDate,
-        results,
+        results: normalized,
         createdBy: userId
         // Loại bỏ storeId và adminId - tất cả store sử dụng chung kết quả
       });
 
       await newLotteryResult.save();
+
+      // Ghi lịch sử tạo mới (lần nhập đầu tiên trong ngày)
+      try {
+        let store, admin;
+        if (user.role === 'employee' && user.storeId) {
+          const Store = require('../models/Store');
+          store = await Store.findById(user.storeId).populate('adminId');
+        }
+        await LotteryResultHistory.create({
+          turnNum,
+          action: 'create',
+          changedBy: userId,
+          changedByName: user.name,
+          changedByUsername: user.username,
+          storeId: store?._id,
+          storeName: store?.name,
+          adminId: store?.adminId?._id,
+          adminName: store?.adminId?.name,
+          beforeResults: normalizeResults({}),
+          afterResults: normalized
+        });
+      } catch (histErr) {
+        console.error('Write lottery history error:', histErr);
+      }
 
       return res.status(201).json({
         success: true,
@@ -195,4 +272,4 @@ module.exports = {
   getLotteryResults,
   getLotteryResultById,
   deleteLotteryResult
-}; 
+};
