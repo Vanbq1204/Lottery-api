@@ -1,6 +1,7 @@
 const Invoice = require('../models/Invoice');
 const WinningInvoice = require('../models/WinningInvoice');
 const PrizeMultiplier = require('../models/PrizeMultiplier');
+const SpecialNumberGroup = require('../models/SpecialNumberGroup');
 const { getVietnamDayRange } = require('../utils/dateUtils');
 
 // Helper function để lấy multiplier theo storeId
@@ -1186,6 +1187,16 @@ const calculateBoPrize = async (invoiceItem, lotteryResult, storeId) => {
   const winningDetails = [];
   let betBos = [];
   let betAmount = 0;
+  // Tải bộ số động theo cửa hàng
+  const boGroups = await SpecialNumberGroup.find({ storeId, betType: 'bo', isActive: true });
+  const BO_DYNAMIC = {};
+  boGroups.forEach(g => {
+    const key = String(g.name).trim().toLowerCase();
+    BO_DYNAMIC[key] = Array.isArray(g.numbers)
+      ? g.numbers.map(n => String(n).padStart(2, '0')).filter(n => /^\d{2}$/.test(n))
+      : [];
+  });
+  console.log(`[PRIZE DEBUG] Loaded dynamic BO groups: ${Object.keys(BO_DYNAMIC).join(', ')}`);
   
   if (invoiceItem.numbers) {
     betAmount = parseInt(invoiceItem.amount) || 0;
@@ -1195,25 +1206,27 @@ const calculateBoPrize = async (invoiceItem, lotteryResult, storeId) => {
     const boNumbers = invoiceItem.numbers.split(/[\s,]+/).filter(n => n.length > 0);
     
     boNumbers.forEach(boName => {
-      // Đảm bảo format 2 chữ số cho bộ số
-      const paddedBoName = boName.padStart(2, '0');
-      console.log(`[PRIZE DEBUG] ---> Kiểm tra bộ: ${paddedBoName}`);
+      // Chuẩn hóa tên bộ: số thì pad 2 chữ số, tên thì viết thường không dấu (đã được enforce khi tạo)
+      const raw = String(boName).trim();
+      const nameKey = /^\d{1,2}$/.test(raw) ? raw.padStart(2, '0') : raw.toLowerCase();
+      console.log(`[PRIZE DEBUG] ---> Kiểm tra bộ: ${nameKey}`);
       
-      if (BO_DATA[paddedBoName] && BO_DATA[paddedBoName].includes(lastTwoDigits)) {
+      const boList = BO_DYNAMIC[nameKey] || BO_DATA[nameKey];
+      if (boList && boList.includes(lastTwoDigits)) {
         const winningAmount = betAmount * prizeMultiplier.multiplier * 1000;
         totalWinningAmount += winningAmount;
         winningDetails.push({
-          bo: paddedBoName,
+          bo: nameKey,
           betAmount: betAmount,
           winningAmount: winningAmount
         });
-        console.log(`[PRIZE DEBUG] -----> Bộ ${paddedBoName} trúng! Thưởng: ${winningAmount} VNĐ`);
-        console.log(`[PRIZE DEBUG] -----> Bộ ${paddedBoName} chứa các số: [${BO_DATA[paddedBoName].join(', ')}]`);
+        console.log(`[PRIZE DEBUG] -----> Bộ ${nameKey} trúng! Thưởng: ${winningAmount} VNĐ`);
+        console.log(`[PRIZE DEBUG] -----> Bộ ${nameKey} chứa các số: [${(boList || []).join(', ')}]`);
         console.log(`[PRIZE DEBUG] -----> Đề về: ${lastTwoDigits} có trong bộ!`);
       } else {
-        console.log(`[PRIZE DEBUG] -----> Bộ ${paddedBoName} không trúng`);
-        if (BO_DATA[paddedBoName]) {
-          console.log(`[PRIZE DEBUG] -----> Bộ ${paddedBoName} chứa: [${BO_DATA[paddedBoName].join(', ')}], đề về: ${lastTwoDigits}`);
+        console.log(`[PRIZE DEBUG] -----> Bộ ${nameKey} không trúng`);
+        if (boList) {
+          console.log(`[PRIZE DEBUG] -----> Bộ ${nameKey} chứa: [${(boList || []).join(', ')}], đề về: ${lastTwoDigits}`);
         }
       }
     });

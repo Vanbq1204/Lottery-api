@@ -21,16 +21,16 @@ const saveInvoice = async (req, res) => {
     // Kiểm tra tính duy nhất của mã hóa đơn
     const existingInvoice = await Invoice.findOne({ invoiceId });
     if (existingInvoice) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Mã hóa đơn ${invoiceId} đã tồn tại. Vui lòng tạo mã mới.` 
+      return res.status(400).json({
+        success: false,
+        message: `Mã hóa đơn ${invoiceId} đã tồn tại. Vui lòng tạo mã mới.`
       });
     }
 
     // Lấy thông tin user từ token
     const employeeId = req.user.id;
     const employee = await User.findById(employeeId);
-    
+
     if (!employee) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy nhân viên' });
     }
@@ -43,14 +43,14 @@ const saveInvoice = async (req, res) => {
 
     // Lấy cài đặt thời gian để kiểm tra validation
     const timeSettings = await TimeSettings.findOne({ adminId: store.adminId._id });
-    
+
     // Kiểm tra thời gian cho lô, xiên, xiên quay
     const specialBetTypes = ['loto', 'xien', 'xienquay'];
-    
+
     if (timeSettings && timeSettings.specialBetsLimitActive) {
       // Kiểm tra xem có item nào thuộc loại special bet types không
       const hasSpecialBets = items.some(item => specialBetTypes.includes(item.betType));
-      
+
       if (hasSpecialBets) {
         const allowed = isBeforeCutoffTime(timeSettings.specialBetsCutoffTime);
         if (!allowed) {
@@ -81,6 +81,41 @@ const saveInvoice = async (req, res) => {
     });
 
     const savedInvoice = await newInvoice.save();
+    console.log('✅ Invoice saved:', savedInvoice.invoiceId);
+
+    // Socket.io emit
+    const io = req.app.get('socketio');
+    console.log('🔌 Socket.io instance:', io ? 'Found' : 'NOT FOUND');
+
+    if (io) {
+      // Convert invoice to plain object with storeId as string for easier comparison
+      const invoicePayload = {
+        ...savedInvoice.toObject(),
+        storeId: savedInvoice.storeId.toString(),
+        adminId: savedInvoice.adminId.toString()
+      };
+
+      const storeRoom = store._id.toString();
+      const adminRoom = store.adminId._id.toString();
+
+      console.log('📤 Emitting new_invoice to rooms:', { storeRoom, adminRoom });
+
+      // Notify store room
+      io.to(storeRoom).emit('new_invoice', {
+        message: `Hóa đơn mới từ ${savedInvoice.customerName}`,
+        invoice: invoicePayload
+      });
+      console.log('✅ Emitted to store room:', storeRoom);
+
+      // Notify admin room
+      io.to(adminRoom).emit('new_invoice', {
+        message: `Hóa đơn mới từ ${store.name} - ${savedInvoice.customerName}`,
+        invoice: invoicePayload
+      });
+      console.log('✅ Emitted to admin room:', adminRoom);
+    } else {
+      console.error('❌ Socket.io not available!');
+    }
 
     res.json({
       success: true,
@@ -90,7 +125,7 @@ const saveInvoice = async (req, res) => {
 
   } catch (error) {
     console.error('Save invoice error:', error);
-    
+
     // Handle duplicate key error
     if (error.code === 11000 && error.keyPattern?.invoiceId) {
       return res.status(400).json({
@@ -98,7 +133,7 @@ const saveInvoice = async (req, res) => {
         message: 'Mã hóa đơn đã tồn tại. Vui lòng tạo mã mới.'
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Lỗi server khi lưu hóa đơn',
@@ -112,25 +147,25 @@ const getInvoicesByStore = async (req, res) => {
   try {
     const employeeId = req.user.id;
     const employee = await User.findById(employeeId);
-    
+
     if (!employee) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy nhân viên' });
     }
 
     const { page = 1, limit = 20, startDate, endDate } = req.query;
-    
+
     // Build query
     const query = { storeId: employee.storeId };
-    
+
     if (startDate || endDate) {
       query.printedAt = {};
-      
+
       if (startDate) {
         // Create Vietnam timezone range for the date
         const startOfDay = new Date(startDate + 'T00:00:00+07:00');
         query.printedAt.$gte = startOfDay;
       }
-      
+
       if (endDate) {
         // Create Vietnam timezone range for the date
         const endOfDay = new Date(endDate + 'T23:59:59.999+07:00');
@@ -169,23 +204,23 @@ const getInvoicesByAdmin = async (req, res) => {
   try {
     const adminId = req.user.id;
     const { page = 1, limit = 20, storeId, startDate, endDate } = req.query;
-    
+
     // Build query
     const query = { adminId };
-    
+
     if (storeId) {
       query.storeId = storeId;
     }
-    
+
     if (startDate || endDate) {
       query.printedAt = {};
-      
+
       if (startDate) {
         // Create Vietnam timezone range for the date
         const startOfDay = new Date(startDate + 'T00:00:00+07:00');
         query.printedAt.$gte = startOfDay;
       }
-      
+
       if (endDate) {
         // Create Vietnam timezone range for the date
         const endOfDay = new Date(endDate + 'T23:59:59.999+07:00');
@@ -224,7 +259,7 @@ const getInvoicesByAdmin = async (req, res) => {
 const getInvoiceDetail = async (req, res) => {
   try {
     const { invoiceId } = req.params;
-    
+
     const invoice = await Invoice.findOne({ invoiceId })
       .populate('storeId', 'name address phone')
       .populate('adminId', 'name email')
@@ -237,11 +272,11 @@ const getInvoiceDetail = async (req, res) => {
     // Check permission
     const userId = req.user.id;
     const userRole = req.user.role;
-    
+
     if (userRole === 'employee' && invoice.employeeId._id.toString() !== userId) {
       return res.status(403).json({ success: false, message: 'Không có quyền xem hóa đơn này' });
     }
-    
+
     if (userRole === 'admin' && invoice.adminId._id.toString() !== userId) {
       return res.status(403).json({ success: false, message: 'Không có quyền xem hóa đơn này' });
     }
@@ -267,7 +302,7 @@ const getInvoiceStats = async (req, res) => {
     const { date } = req.query;
     const user = req.user;
     const { getLotoMultiplierByStoreId } = require('./lotoMultiplierController');
-    
+
     // Build date query với múi giờ Việt Nam
     let dateQuery = {};
     if (date) {
@@ -277,7 +312,7 @@ const getInvoiceStats = async (req, res) => {
         $lte: endOfDay
       };
     }
-    
+
     // Build store query based on user role
     let storeQuery = {};
     if (user.role === 'admin') {
@@ -287,7 +322,7 @@ const getInvoiceStats = async (req, res) => {
     } else {
       storeQuery.storeId = user.storeId;
     }
-    
+
     const query = { ...dateQuery, ...storeQuery };
 
     // Get all invoices for the date and store
@@ -330,14 +365,14 @@ const getInvoiceStats = async (req, res) => {
         const amount = item.totalAmount || 0;
 
         // Add to bet type totals
-        switch(betType) {
+        switch (betType) {
           case 'loto':
             stats.lotoTotal += amount;
             // Process loto numbers and points
             if (item.numbers && item.points) {
               const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
               const points = parseInt(item.points) || 0;
-              
+
               numbers.forEach(num => {
                 const paddedNum = num.padStart(2, '0');
                 if (!stats.loto[paddedNum]) {
@@ -353,7 +388,7 @@ const getInvoiceStats = async (req, res) => {
             if (item.numbers && item.amount) {
               const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
               const betAmount = parseInt(item.amount) || 0;
-              
+
               numbers.forEach(num => {
                 const paddedNum = num.padStart(2, '0');
                 if (!stats['2s'][paddedNum]) {
@@ -369,7 +404,7 @@ const getInvoiceStats = async (req, res) => {
             if (item.numbers && item.amount) {
               const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
               const betAmount = parseInt(item.amount) || 0;
-              
+
               numbers.forEach(num => {
                 const paddedNum = num.padStart(3, '0');
                 if (!stats['3s'][paddedNum]) {
@@ -385,7 +420,7 @@ const getInvoiceStats = async (req, res) => {
             if (item.numbers && item.amount) {
               const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
               const betAmount = parseInt(item.amount) || 0;
-              
+
               numbers.forEach(num => {
                 const paddedNum = num.padStart(4, '0');
                 if (!stats['4s'][paddedNum]) {
@@ -401,7 +436,7 @@ const getInvoiceStats = async (req, res) => {
             if (item.numbers && item.amount) {
               const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
               const betAmount = parseInt(item.amount) || 0;
-              
+
               numbers.forEach(num => {
                 // Clean tong number (remove "tổng" prefix if exists)
                 const cleanNum = num.toLowerCase().replace(/^tổng\s*/, '');
@@ -418,7 +453,7 @@ const getInvoiceStats = async (req, res) => {
             if (item.numbers && item.amount) {
               const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
               const betAmount = parseInt(item.amount) || 0;
-              
+
               numbers.forEach(num => {
                 const cleanNum = num.toLowerCase().trim();
                 if (!stats.kep[cleanNum]) {
@@ -434,7 +469,7 @@ const getInvoiceStats = async (req, res) => {
             if (item.numbers && item.amount) {
               const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
               const betAmount = parseInt(item.amount) || 0;
-              
+
               numbers.forEach(num => {
                 // Clean dau number (remove "đầu" prefix if exists)
                 const cleanNum = num.toLowerCase().replace(/^đầu\s*/, '');
@@ -451,7 +486,7 @@ const getInvoiceStats = async (req, res) => {
             if (item.numbers && item.amount) {
               const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
               const betAmount = parseInt(item.amount) || 0;
-              
+
               numbers.forEach(num => {
                 // Clean dit number (remove "đít" prefix if exists)
                 const cleanNum = num.toLowerCase().replace(/^đít\s*/, '');
@@ -469,7 +504,7 @@ const getInvoiceStats = async (req, res) => {
               // Với cấu trúc mới, item.numbers chứa tên bộ (ví dụ: "05 06 07")
               const boNumbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
               const betAmount = parseInt(item.amount) || 0;
-              
+
               boNumbers.forEach(boName => {
                 // Đảm bảo format 2 chữ số
                 const boNumber = boName.padStart(2, '0');
@@ -488,7 +523,7 @@ const getInvoiceStats = async (req, res) => {
             if (item.numbers && item.amount) {
               const combinations = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
               const betAmount = parseInt(item.amount) || 0;
-              
+
               combinations.forEach(combo => {
                 // Add (xiên nháy) suffix if isXienNhay is true
                 const displayCombo = item.isXienNhay ? `${combo} (xiên nháy)` : combo;
@@ -505,7 +540,7 @@ const getInvoiceStats = async (req, res) => {
             if (item.numbers && item.amount) {
               const combinations = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
               const betAmount = parseInt(item.amount) || 0;
-              
+
               combinations.forEach(combo => {
                 if (!stats.xienquay[combo]) {
                   stats.xienquay[combo] = 0;
@@ -556,7 +591,7 @@ const editInvoice = async (req, res) => {
 
     const employeeId = req.user.id;
     const employee = await User.findById(employeeId);
-    
+
     if (!employee) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy nhân viên' });
     }
@@ -654,6 +689,35 @@ const editInvoice = async (req, res) => {
 
     await history.save();
 
+    // Socket.io emit for edit event
+    const io = req.app.get('socketio');
+    if (io) {
+      const invoicePayload = {
+        ...updatedInvoice.toObject(),
+        storeId: updatedInvoice.storeId.toString(),
+        adminId: updatedInvoice.adminId.toString()
+      };
+
+      const storeRoom = employee.storeId.toString();
+      const adminRoom = updatedInvoice.adminId.toString();
+
+      console.log('📤 Emitting edit_invoice to rooms:', { storeRoom, adminRoom });
+
+      // Notify store room
+      io.to(storeRoom).emit('edit_invoice', {
+        message: `Hóa đơn ${invoiceId} đã được sửa`,
+        invoice: invoicePayload
+      });
+
+      // Notify admin room
+      io.to(adminRoom).emit('edit_invoice', {
+        message: `Hóa đơn ${invoiceId} đã được sửa`,
+        invoice: invoicePayload
+      });
+
+      console.log('✅ Emitted edit_invoice events');
+    }
+
     res.json({
       success: true,
       message: 'Sửa hóa đơn thành công',
@@ -678,7 +742,7 @@ const deleteInvoice = async (req, res) => {
 
     const employeeId = req.user.id;
     const employee = await User.findById(employeeId);
-    
+
     if (!employee) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy nhân viên' });
     }
@@ -743,6 +807,35 @@ const deleteInvoice = async (req, res) => {
     // Xóa hóa đơn
     await Invoice.deleteOne({ invoiceId });
 
+    // Socket.io emit for delete event
+    const io = req.app.get('socketio');
+    if (io) {
+      const deletePayload = {
+        invoiceId,
+        storeId: employee.storeId.toString(),
+        adminId: existingInvoice.adminId.toString()
+      };
+
+      const storeRoom = employee.storeId.toString();
+      const adminRoom = existingInvoice.adminId.toString();
+
+      console.log('📤 Emitting delete_invoice to rooms:', { storeRoom, adminRoom });
+
+      // Notify store room
+      io.to(storeRoom).emit('delete_invoice', {
+        message: `Hóa đơn ${invoiceId} đã được xóa`,
+        data: deletePayload
+      });
+
+      // Notify admin room
+      io.to(adminRoom).emit('delete_invoice', {
+        message: `Hóa đơn ${invoiceId} đã được xóa`,
+        data: deletePayload
+      });
+
+      console.log('✅ Emitted delete_invoice events');
+    }
+
     res.json({
       success: true,
       message: 'Xóa hóa đơn thành công'
@@ -763,20 +856,20 @@ const getInvoiceHistory = async (req, res) => {
   try {
     const employeeId = req.user.id;
     const employee = await User.findById(employeeId);
-    
+
     if (!employee) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy nhân viên' });
     }
 
     const { page = 1, limit = 20, startDate, endDate, action } = req.query;
-    
+
     // Build query
     const query = { storeId: employee.storeId };
-    
+
     if (action) {
       query.action = action;
     }
-    
+
     if (startDate || endDate) {
       query.actionDate = {};
       if (startDate) query.actionDate.$gte = new Date(startDate);
@@ -815,14 +908,14 @@ const getHistoryByDate = async (req, res) => {
     const { date } = req.params;
     const employeeId = req.user.id;
     const employee = await User.findById(employeeId);
-    
+
     if (!employee) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy nhân viên' });
     }
 
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
-    
+
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
@@ -833,8 +926,8 @@ const getHistoryByDate = async (req, res) => {
         $lte: endOfDay
       }
     })
-    .populate('employeeId', 'name username')
-    .sort({ actionDate: -1 });
+      .populate('employeeId', 'name username')
+      .sort({ actionDate: -1 });
 
     res.json({
       success: true,

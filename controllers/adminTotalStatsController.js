@@ -1,6 +1,7 @@
 const Invoice = require('../models/Invoice');
 const mongoose = require('mongoose');
 const { getLotoMultiplierByStoreId } = require('./lotoMultiplierController');
+const SpecialNumberGroup = require('../models/SpecialNumberGroup');
 
 // Lấy thống kê tổng hợp tất cả cửa hàng của admin theo adminId
 const getAdminTotalStatistics = async (req, res) => {
@@ -49,15 +50,33 @@ const getAdminTotalStatistics = async (req, res) => {
 
     console.log(`Found ${invoices.length} invoices for admin ${targetAdminId}`);
 
-    // Lấy danh sách storeId từ các invoices để lấy hệ số lô
+    // Lấy danh sách storeId từ các invoices để lấy hệ số lô và bộ động
     const storeIds = [...new Set(invoices.map(invoice => invoice.storeId.toString()))];
     const lotoMultipliers = {};
     const lotoPointsByStore = {}; // Điểm lô theo từng cửa hàng
+    const boGroupMap = {}; // Bản đồ tên bộ -> danh sách số (động)
     
     // Lấy hệ số lô cho từng cửa hàng và khởi tạo điểm
     for (const storeId of storeIds) {
       lotoMultipliers[storeId] = await getLotoMultiplierByStoreId(storeId);
       lotoPointsByStore[storeId] = 0;
+    }
+
+    // Tải bộ (động) theo tất cả store của admin
+    try {
+      const boGroups = await SpecialNumberGroup.find({
+        storeId: { $in: storeIds.map(id => new mongoose.Types.ObjectId(id)) },
+        betType: 'bo',
+        isActive: true
+      });
+      boGroups.forEach(g => {
+        const name = String(g.name).trim();
+        boGroupMap[name] = Array.isArray(g.numbers)
+          ? g.numbers.map(n => String(n).padStart(2, '0')).filter(n => /^\d{2}$/.test(n))
+          : [];
+      });
+    } catch (err) {
+      console.error('Lỗi tải bộ động cho admin:', err);
     }
     
     // Không cần defaultLotoMultiplier nữa vì sẽ tính riêng theo từng store
@@ -331,16 +350,21 @@ const getAdminTotalStatistics = async (req, res) => {
               // Với bộ, tách từng bộ thành item riêng biệt
               const boNumbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
               boNumbers.forEach(boName => {
-                const boNumber = boName.padStart(2, '0');
+                const boNumber = boName.trim();
                 if (!stats.grouped[betType][boNumber]) {
                   stats.grouped[betType][boNumber] = {
                     totalAmount: 0,
-                    detailString: `Bộ ${boNumber}: `
+                    count: Array.isArray(boGroupMap[boNumber]) ? boGroupMap[boNumber].length : undefined,
+                    detailString: `Bộ ${boNumber}${Array.isArray(boGroupMap[boNumber]) ? ` (${boGroupMap[boNumber].length} số)` : ''}: `
                   };
                 }
                 
                 stats.grouped[betType][boNumber].totalAmount += actualBetAmount;
-                stats.grouped[betType][boNumber].detailString = `Bộ ${boNumber}: ${stats.grouped[betType][boNumber].totalAmount}n`;
+                const cnt = Array.isArray(stats.grouped[betType][boNumber].count)
+                  ? stats.grouped[betType][boNumber].count
+                  : (Array.isArray(boGroupMap[boNumber]) ? boGroupMap[boNumber].length : undefined);
+                const countLabel = (typeof cnt === 'number') ? ` (${cnt} số)` : '';
+                stats.grouped[betType][boNumber].detailString = `Bộ ${boNumber}${countLabel}: ${stats.grouped[betType][boNumber].totalAmount}n`;
               });
             } else {
               // Các loại khác giữ nguyên
@@ -390,6 +414,11 @@ const getAdminTotalStatistics = async (req, res) => {
     stats.lotoCalculationDetails = lotoCalculationDetails;
     stats.lotoCalculationString = lotoCalculationString;
     stats.totalLotoRevenue = totalLotoRevenue;
+    // Thêm thông tin bộ động để frontend sử dụng khi gộp và hiển thị
+    const boCounts = {};
+    Object.entries(boGroupMap).forEach(([name, arr]) => { boCounts[name] = Array.isArray(arr) ? arr.length : 0; });
+    stats.boCounts = boCounts;
+    stats.boDefinitions = boGroupMap;
 
 
 
