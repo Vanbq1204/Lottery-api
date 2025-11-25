@@ -10,8 +10,16 @@ const messagesSchema = new mongoose.Schema({
   dit: { type: String, default: '' },
   kep: { type: String, default: '' },
   bo: { type: String, default: '' },
+  // Legacy fields
   xien: { type: String, default: '' },
-  xienquay: { type: String, default: '' }
+  xienquay: { type: String, default: '' },
+  // New split fields
+  xien2: { type: String, default: '' },
+  xien3: { type: String, default: '' },
+  xien4: { type: String, default: '' },
+  xienq3: { type: String, default: '' },
+  xienq4: { type: String, default: '' },
+  xiennhay: { type: String, default: '' }
 }, { _id: false });
 
 const messageExportSnapshotSchema = new mongoose.Schema({

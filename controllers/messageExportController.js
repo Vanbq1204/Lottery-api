@@ -118,9 +118,48 @@ const buildMessages = (stats, options = {}) => {
     });
     const parts = Array.from(byAmount.keys()).sort((a,b)=>b-a).map(a => {
       const items = byAmount.get(a).sort();
-      return `${items.join(',')}x${a}n`;
+      return `${items.join(',')} x ${a}n`;
     });
     return `${label}: ${parts.join(', ')}`;
+  };
+
+  const groupLines = (label, map) => {
+    const byAmount = new Map();
+    Object.entries(map || {}).forEach(([k, v]) => {
+      let a = parseInt(v) || 0; if (a <= 0) return;
+      a = Math.round(a * multiplier);
+      if (!byAmount.has(a)) byAmount.set(a, []);
+      byAmount.get(a).push(k);
+    });
+    const parts = Array.from(byAmount.keys()).sort((a,b)=>b-a).map(a => {
+      const items = byAmount.get(a).sort();
+      return `${label} : ${items.join(',')} x ${a}n`;
+    });
+    return parts.join('\n');
+  };
+
+  const removeAccents = (s) => {
+    if (!s) return s;
+    return String(s)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D');
+  };
+
+  const groupLinesNoAccent = (label, map) => {
+    const byAmount = new Map();
+    Object.entries(map || {}).forEach(([k, v]) => {
+      let a = parseInt(v) || 0; if (a <= 0) return;
+      a = Math.round(a * multiplier);
+      if (!byAmount.has(a)) byAmount.set(a, []);
+      byAmount.get(a).push(removeAccents(k));
+    });
+    const parts = Array.from(byAmount.keys()).sort((a,b)=>b-a).map(a => {
+      const items = byAmount.get(a).map(x=>removeAccents(x)).sort();
+      return `${label} : ${items.join(',')} x ${a}n`;
+    });
+    return parts.join('\n');
   };
 
   // Lô
@@ -130,22 +169,120 @@ const buildMessages = (stats, options = {}) => {
     if (!lotoGroups.has(p)) lotoGroups.set(p, []);
     lotoGroups.get(p).push(num);
   });
-  const lotoMsg = `L: ${Array.from(lotoGroups.keys()).sort((a,b)=>b-a).map(p=>{
+  const lotoMsg = `Lo: ${Array.from(lotoGroups.keys()).sort((a,b)=>b-a).map(p=>{
     const nums = lotoGroups.get(p).sort((x,y)=>parseInt(x)-parseInt(y));
     return `${nums.join(',')}x${p}đ`;
   }).join(', ')}`;
 
-  const twoSMsg = groupLine('Đ', stats['2s']);
-  const threeSMsg = groupLine('3s', stats['3s']);
+  const twoSMsg = groupLine('De', stats['2s']);
+  const threeSMsg = groupLine('Bc', stats['3s']);
   const fourSMsg = groupLine('4s', stats['4s']);
-  const tongMsg = groupLine('Tổng', stats.grouped.tong);
-  const dauMsg = groupLine('Đầu', stats.grouped.dau);
-  const ditMsg = groupLine('Đít', stats.grouped.dit);
-  const kepMsg = groupLine('Kép', stats.grouped.kep);
-  const boMsg = groupLine('Bộ', stats.grouped.bo);
+  const tongMsg = groupLines('De Tong', stats.grouped.tong);
+  const dauMsg = groupLines('De Dau', stats.grouped.dau);
+  const ditMsg = groupLines('De Dit', stats.grouped.dit);
+  const kepMsg = groupLinesNoAccent('Kep', stats.grouped.kep);
+  // Tách BO: số (00-99) gộp theo mức tiền, và tên đặc biệt tách dòng riêng
+  const boMap = stats.grouped.bo || {};
+  const numericBo = {};
+  const specialBoLines = [];
+  const getBoAlias = (name) => {
+    const n = String(name).toLowerCase();
+    const base = (x) => `De cham ${x}`;
+    switch (n) {
+      case 'chamkhong': return base('0');
+      case 'chammot': return base('1');
+      case 'chamhai': return base('2');
+      case 'chamba': return base('3');
+      case 'chambon': return base('4');
+      case 'chamnam': return base('5');
+      case 'chamsau': return base('6');
+      case 'chambay': return base('7');
+      case 'chamtam': return base('8');
+      case 'chamchin': return base('9');
+      case 'chanle': return 'De chanle';
+      case 'lechan': return 'De lechan';
+      case 'lele': return 'De lele';
+      case 'chanchan': return 'De chanchan';
+      default: return null;
+    }
+  };
+  Object.entries(boMap).forEach(([key, val]) => {
+    const alias = getBoAlias(key);
+    const amount = Math.round((parseInt(val) || 0) * multiplier);
+    if (!amount) return;
+    const isNumericTwo = /^\d{2}$/.test(String(key));
+    if (alias) {
+      specialBoLines.push(`${alias} x ${amount}n`);
+    } else if (!isNumericTwo) {
+      specialBoLines.push(`De ${removeAccents(String(key))} x ${amount}n`);
+    } else {
+      numericBo[key] = (numericBo[key] || 0) + amount;
+    }
+  });
+  // numericBo hiện là số tiền đã scale, groupLines cũng scale lại nên cần bypass scale lần 2
+  const deBoMsg = (() => {
+    // Tạo lại map với giá trị chưa scale để dùng groupLines? Hoặc viết groupLinesNoScale.
+    // Viết nhanh một phiên bản không nhân hệ số nữa.
+    const byAmount = new Map();
+    Object.entries(numericBo).forEach(([k, scaledAmount]) => {
+      const a = scaledAmount;
+      if (a <= 0) return;
+      if (!byAmount.has(a)) byAmount.set(a, []);
+      byAmount.get(a).push(k);
+    });
+    const parts = Array.from(byAmount.keys()).sort((a,b)=>b-a).map(a => {
+      const items = byAmount.get(a).sort();
+      return `De Bo : ${items.join(',')} x ${a}n`;
+    });
+    return parts.join('\n');
+  })();
+  const boMsg = [deBoMsg, ...specialBoLines.sort()].filter(s => s && s.length > 0).join('\n');
 
-  const xMsg = groupLine('X', stats.xien);
-  const xqMsg = groupLine('Xquay', stats.xienquay);
+  // Xiên: tách theo độ dài (2/3/4)
+  const groupXiByLen = (label, map, len) => {
+    const filtered = {};
+    Object.entries(map || {}).forEach(([combo, amt]) => {
+      const isNhay = combo.includes('xiên nháy');
+      if (isNhay) return; // loại xiên nháy khỏi nhóm thường
+      const core = combo.split(' ')[0]; // bỏ nhãn nếu có
+      const parts = core.split('-').filter(Boolean);
+      if (parts.length === len) {
+        filtered[combo] = amt;
+      }
+    });
+    return groupLine(label, filtered);
+  };
+
+  const groupXiNhay = (label, map) => {
+    const filtered = {};
+    Object.entries(map || {}).forEach(([combo, amt]) => {
+      if (combo.includes('xiên nháy')) {
+        // bỏ nhãn để hiển thị gọn
+        const core = combo.split(' ')[0];
+        filtered[core] = amt;
+      }
+    });
+    if (Object.keys(filtered).length === 0) return '';
+    return groupLine(label, filtered);
+  };
+  const x2Msg = groupXiByLen('Xien2', stats.xien, 2);
+  const x3Msg = groupXiByLen('Xien3', stats.xien, 3);
+  const x4Msg = groupXiByLen('Xien4', stats.xien, 4);
+
+  // Xiên quay: tách 3/4
+  const groupXqByLen = (label, map, len) => {
+    const filtered = {};
+    Object.entries(map || {}).forEach(([combo, amt]) => {
+      const parts = combo.split('-').filter(Boolean);
+      if (parts.length === len) {
+        filtered[combo] = amt;
+      }
+    });
+    return groupLine(label, filtered);
+  };
+  const xq3Msg = groupXqByLen('Xienq3', stats.xienquay, 3);
+  const xq4Msg = groupXqByLen('Xienq4', stats.xienquay, 4);
+  const xienNhayMsg = groupXiNhay('Xiennhay', stats.xien);
 
   return {
     loto: lotoMsg,
@@ -157,8 +294,12 @@ const buildMessages = (stats, options = {}) => {
     dit: ditMsg,
     kep: kepMsg,
     bo: boMsg,
-    xien: xMsg,
-    xienquay: xqMsg
+    xien2: x2Msg,
+    xien3: x3Msg,
+    xien4: x4Msg,
+    xienq3: xq3Msg,
+    xienq4: xq4Msg,
+    xiennhay: xienNhayMsg
   };
 };
 
