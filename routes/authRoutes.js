@@ -13,11 +13,11 @@ router.get('/profile', authenticateToken, getProfile);
 router.get('/store/:storeId', authenticateToken, async (req, res) => {
   try {
     const { storeId } = req.params;
-    
+
     const store = await Store.findById(storeId)
       .populate('adminId', 'name email')
       .populate('employees', 'name username');
-    
+
     if (!store) {
       return res.status(404).json({
         success: false,

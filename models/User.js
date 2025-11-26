@@ -40,7 +40,7 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  
+
   // Thông tin cho Admin
   parentId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -56,7 +56,7 @@ const userSchema = new mongoose.Schema({
     enum: ['paid', 'pending', 'overdue'],
     default: 'paid'
   },
-  
+
   // Thông tin cho Employee
   storeId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -67,7 +67,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  
+
   // Metadata
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -83,9 +83,9 @@ const userSchema = new mongoose.Schema({
 });
 
 // Hash password trước khi lưu
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  
+
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -96,7 +96,7 @@ userSchema.pre('save', async function(next) {
 });
 
 // So sánh password
-userSchema.methods.comparePassword = async function(candidatePassword) {
+userSchema.methods.comparePassword = async function (candidatePassword) {
   try {
     return await bcrypt.compare(candidatePassword, this.password);
   } catch (error) {
@@ -105,7 +105,7 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 };
 
 // Lấy thông tin user không bao gồm password
-userSchema.methods.toJSON = function() {
+userSchema.methods.toJSON = function () {
   const userObject = this.toObject();
   delete userObject.password;
   return userObject;

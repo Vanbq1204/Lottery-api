@@ -134,10 +134,12 @@ const buildMessages = (stats, options = {}) => {
       if (!byAmount.has(a)) byAmount.set(a, []);
       byAmount.get(a).push(k);
     });
-    const parts = Array.from(byAmount.keys()).sort((a,b)=>b-a).map(a => {
+    const parts = Array.from(byAmount.keys()).sort((a, b) => b - a).map(a => {
       const items = byAmount.get(a).sort();
       return `${items.join(',')} x ${a}n`;
     });
+    // Trả về chuỗi rỗng nếu không có dữ liệu
+    if (parts.length === 0) return '';
     return `${label}: ${parts.join(', ')}`;
   };
 
@@ -149,7 +151,7 @@ const buildMessages = (stats, options = {}) => {
       if (!byAmount.has(a)) byAmount.set(a, []);
       byAmount.get(a).push(k);
     });
-    const parts = Array.from(byAmount.keys()).sort((a,b)=>b-a).map(a => {
+    const parts = Array.from(byAmount.keys()).sort((a, b) => b - a).map(a => {
       const items = byAmount.get(a).sort();
       return `${label} : ${items.join(',')} x ${a}n`;
     });
@@ -173,8 +175,8 @@ const buildMessages = (stats, options = {}) => {
       if (!byAmount.has(a)) byAmount.set(a, []);
       byAmount.get(a).push(removeAccents(k));
     });
-    const parts = Array.from(byAmount.keys()).sort((a,b)=>b-a).map(a => {
-      const items = byAmount.get(a).map(x=>removeAccents(x)).sort();
+    const parts = Array.from(byAmount.keys()).sort((a, b) => b - a).map(a => {
+      const items = byAmount.get(a).map(x => removeAccents(x)).sort();
       return `${label} : ${items.join(',')} x ${a}n`;
     });
     return parts.join('\n');
@@ -187,14 +189,17 @@ const buildMessages = (stats, options = {}) => {
     if (!lotoGroups.has(p)) lotoGroups.set(p, []);
     lotoGroups.get(p).push(num);
   });
-  const lotoMsg = `${labels.lo}: ${Array.from(lotoGroups.keys()).sort((a,b)=>b-a).map(p=>{
-    const nums = lotoGroups.get(p).sort((x,y)=>parseInt(x)-parseInt(y));
+  const lotoMsg = `${labels.lo}: ${Array.from(lotoGroups.keys()).sort((a, b) => b - a).map(p => {
+    const nums = lotoGroups.get(p).sort((x, y) => parseInt(x) - parseInt(y));
     return `${nums.join(',')}x${p}đ`;
   }).join(', ')}`;
 
   const twoSMsg = groupLine(labels.twoS, stats['2s']);
   const threeSMsg = groupLine(labels.threeS, stats['3s']);
-  const fourSMsg = groupLine(labels.fourS, stats['4s']);
+
+  // Chỉ tạo message 4s nếu có dữ liệu
+  const has4sData = Object.keys(stats['4s'] || {}).length > 0;
+  const fourSMsg = has4sData ? groupLine(labels.fourS, stats['4s']) : '';
   const tongMsg = groupLines(labels.tong, stats.grouped.tong);
   const dauMsg = groupLines(labels.dau, stats.grouped.dau);
   const ditMsg = groupLines(labels.dit, stats.grouped.dit);
@@ -262,7 +267,7 @@ const buildMessages = (stats, options = {}) => {
       if (!byAmount.has(a)) byAmount.set(a, []);
       byAmount.get(a).push(k);
     });
-    const parts = Array.from(byAmount.keys()).sort((a,b)=>b-a).map(a => {
+    const parts = Array.from(byAmount.keys()).sort((a, b) => b - a).map(a => {
       const items = byAmount.get(a).sort();
       return `${labels.boPrefix} : ${items.join(',')} x ${a}n`;
     });
