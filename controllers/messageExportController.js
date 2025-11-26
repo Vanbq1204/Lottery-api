@@ -107,6 +107,24 @@ const buildMessages = (stats, options = {}) => {
   const multiplierInput = typeof options.multiplier === 'number' ? options.multiplier : 1;
   const multiplier = Math.max(1, multiplierInput); // tối thiểu 1
 
+  const labels = Object.assign({
+    lo: 'Lo',
+    twoS: 'De',
+    threeS: 'Bc',
+    fourS: '4s',
+    tong: 'De Tong',
+    dau: 'De Dau',
+    dit: 'De Dit',
+    kep: 'Kep',
+    boPrefix: 'Bo',
+    xien2: 'Xien2',
+    xien3: 'Xien3',
+    xien4: 'Xien4',
+    xq3: 'xq3',
+    xq4: 'xq4',
+    xiennhay: 'Xiennhay'
+  }, options.labels || {});
+
   const groupLine = (label, map) => {
     const byAmount = new Map();
     Object.entries(map || {}).forEach(([k, v]) => {
@@ -169,18 +187,18 @@ const buildMessages = (stats, options = {}) => {
     if (!lotoGroups.has(p)) lotoGroups.set(p, []);
     lotoGroups.get(p).push(num);
   });
-  const lotoMsg = `Lo: ${Array.from(lotoGroups.keys()).sort((a,b)=>b-a).map(p=>{
+  const lotoMsg = `${labels.lo}: ${Array.from(lotoGroups.keys()).sort((a,b)=>b-a).map(p=>{
     const nums = lotoGroups.get(p).sort((x,y)=>parseInt(x)-parseInt(y));
     return `${nums.join(',')}x${p}đ`;
   }).join(', ')}`;
 
-  const twoSMsg = groupLine('De', stats['2s']);
-  const threeSMsg = groupLine('Bc', stats['3s']);
-  const fourSMsg = groupLine('4s', stats['4s']);
-  const tongMsg = groupLines('De Tong', stats.grouped.tong);
-  const dauMsg = groupLines('De Dau', stats.grouped.dau);
-  const ditMsg = groupLines('De Dit', stats.grouped.dit);
-  const kepMsg = groupLinesNoAccent('Kep', stats.grouped.kep);
+  const twoSMsg = groupLine(labels.twoS, stats['2s']);
+  const threeSMsg = groupLine(labels.threeS, stats['3s']);
+  const fourSMsg = groupLine(labels.fourS, stats['4s']);
+  const tongMsg = groupLines(labels.tong, stats.grouped.tong);
+  const dauMsg = groupLines(labels.dau, stats.grouped.dau);
+  const ditMsg = groupLines(labels.dit, stats.grouped.dit);
+  const kepMsg = groupLinesNoAccent(labels.kep, stats.grouped.kep);
   // Tách BO: số (00-99) gộp theo mức tiền, và tên đặc biệt tách dòng riêng
   const boMap = stats.grouped.bo || {};
   const numericBo = {};
@@ -232,7 +250,7 @@ const buildMessages = (stats, options = {}) => {
     });
     const parts = Array.from(byAmount.keys()).sort((a,b)=>b-a).map(a => {
       const items = byAmount.get(a).sort();
-      return `Bo : ${items.join(',')} x ${a}n`;
+      return `${labels.boPrefix} : ${items.join(',')} x ${a}n`;
     });
     return parts.join('\n');
   })();
@@ -265,9 +283,9 @@ const buildMessages = (stats, options = {}) => {
     if (Object.keys(filtered).length === 0) return '';
     return groupLine(label, filtered);
   };
-  const x2Msg = groupXiByLen('Xien2', stats.xien, 2);
-  const x3Msg = groupXiByLen('Xien3', stats.xien, 3);
-  const x4Msg = groupXiByLen('Xien4', stats.xien, 4);
+  const x2Msg = groupXiByLen(labels.xien2, stats.xien, 2);
+  const x3Msg = groupXiByLen(labels.xien3, stats.xien, 3);
+  const x4Msg = groupXiByLen(labels.xien4, stats.xien, 4);
 
   // Xiên quay: tách 3/4
   const groupXqByLen = (label, map, len) => {
@@ -280,9 +298,9 @@ const buildMessages = (stats, options = {}) => {
     });
     return groupLine(label, filtered);
   };
-  const xq3Msg = groupXqByLen('xq3', stats.xienquay, 3);
-  const xq4Msg = groupXqByLen('xq4', stats.xienquay, 4);
-  const xienNhayMsg = groupXiNhay('Xiennhay', stats.xien);
+  const xq3Msg = groupXqByLen(labels.xq3, stats.xienquay, 3);
+  const xq4Msg = groupXqByLen(labels.xq4, stats.xienquay, 4);
+  const xienNhayMsg = groupXiNhay(labels.xiennhay, stats.xien);
 
   return {
     loto: lotoMsg,
@@ -307,7 +325,7 @@ const buildMessages = (stats, options = {}) => {
 const exportMessages = async (req, res) => {
   try {
     const adminId = req.user.id;
-    const { date, time, multiplier } = req.body; // date: YYYY-MM-DD, time: HH:MM optional, multiplier optional
+    const { date, time, multiplier, format } = req.body; // date: YYYY-MM-DD, time: HH:MM optional, multiplier optional, format optional
     const { startOfDay } = getVietnamDayRange(date);
     const endTime = parseVietnamEndTime(date, time);
 
@@ -317,7 +335,7 @@ const exportMessages = async (req, res) => {
 
     // Tính stats và dựng message
     const stats = await aggregateStatsForWindow(adminId, startTime, endTime);
-    const messages = buildMessages(stats, { multiplier: typeof multiplier === 'number' ? multiplier : 1.0 });
+    const messages = buildMessages(stats, { multiplier: typeof multiplier === 'number' ? multiplier : 1.0, labels: format });
 
     // Tạo snapshot mới
     const seq = (last?.sequence || 0) + 1;
@@ -361,7 +379,7 @@ const reexportSnapshot = async (req, res) => {
   try {
     const adminId = req.user.id;
     const { snapshotId } = req.params;
-    const { multiplier } = req.body || {};
+    const { multiplier, format } = req.body || {};
 
     const snapshot = await MessageExportSnapshot.findById(snapshotId);
     if (!snapshot || snapshot.adminId.toString() !== adminId.toString()) {
@@ -370,7 +388,7 @@ const reexportSnapshot = async (req, res) => {
 
     // Recompute messages for the same time window
     const stats = await aggregateStatsForWindow(adminId, snapshot.startTime, snapshot.endTime);
-    const messages = buildMessages(stats, { multiplier: typeof multiplier === 'number' ? multiplier : 1.0 });
+    const messages = buildMessages(stats, { multiplier: typeof multiplier === 'number' ? multiplier : 1.0, labels: format });
 
     snapshot.messages = messages;
     await snapshot.save();
