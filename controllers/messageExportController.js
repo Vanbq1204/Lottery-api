@@ -232,7 +232,7 @@ const buildMessages = (stats, options = {}) => {
     });
     const parts = Array.from(byAmount.keys()).sort((a,b)=>b-a).map(a => {
       const items = byAmount.get(a).sort();
-      return `De Bo : ${items.join(',')} x ${a}n`;
+      return `Bo : ${items.join(',')} x ${a}n`;
     });
     return parts.join('\n');
   })();
@@ -280,8 +280,8 @@ const buildMessages = (stats, options = {}) => {
     });
     return groupLine(label, filtered);
   };
-  const xq3Msg = groupXqByLen('Xienq3', stats.xienquay, 3);
-  const xq4Msg = groupXqByLen('Xienq4', stats.xienquay, 4);
+  const xq3Msg = groupXqByLen('xq3', stats.xienquay, 3);
+  const xq4Msg = groupXqByLen('xq4', stats.xienquay, 4);
   const xienNhayMsg = groupXiNhay('Xiennhay', stats.xien);
 
   return {
