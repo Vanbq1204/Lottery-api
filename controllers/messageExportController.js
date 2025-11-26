@@ -151,6 +151,9 @@ const buildMessages = (stats, options = {}) => {
       if (!byAmount.has(a)) byAmount.set(a, []);
       byAmount.get(a).push(k);
     });
+    if (byAmount.size === 0) {
+      return '';
+    }
     const parts = Array.from(byAmount.keys()).sort((a, b) => b - a).map(a => {
       const items = byAmount.get(a).sort();
       return `${label} : ${items.join(',')} x ${a}n`;
@@ -189,17 +192,17 @@ const buildMessages = (stats, options = {}) => {
     if (!lotoGroups.has(p)) lotoGroups.set(p, []);
     lotoGroups.get(p).push(num);
   });
-  const lotoMsg = `${labels.lo}: ${Array.from(lotoGroups.keys()).sort((a, b) => b - a).map(p => {
-    const nums = lotoGroups.get(p).sort((x, y) => parseInt(x) - parseInt(y));
-    return `${nums.join(',')}x${p}đ`;
-  }).join(', ')}`;
+  const lotoMsg = lotoGroups.size === 0
+    ? ''
+    : `${labels.lo}: ${Array.from(lotoGroups.keys()).sort((a, b) => b - a).map(p => {
+      const nums = lotoGroups.get(p).sort((x, y) => parseInt(x) - parseInt(y));
+      return `${nums.join(',')}x${p}đ`;
+    }).join(', ')}`;
 
   const twoSMsg = groupLine(labels.twoS, stats['2s']);
   const threeSMsg = groupLine(labels.threeS, stats['3s']);
+  const fourSMsg = groupLine(labels.fourS, stats['4s']);
 
-  // Chỉ tạo message 4s nếu có dữ liệu
-  const has4sData = Object.keys(stats['4s'] || {}).length > 0;
-  const fourSMsg = has4sData ? groupLine(labels.fourS, stats['4s']) : '';
   const tongMsg = groupLines(labels.tong, stats.grouped.tong);
   const dauMsg = groupLines(labels.dau, stats.grouped.dau);
   const ditMsg = groupLines(labels.dit, stats.grouped.dit);
@@ -213,6 +216,9 @@ const buildMessages = (stats, options = {}) => {
       totals.set(item, (totals.get(item) || 0) + a);
     });
     const label = removeAccents(String(labels.kep || 'Kep')).toLowerCase();
+    if (totals.size === 0) {
+      return '';
+    }
     const lines = Array.from(totals.entries())
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([item, amt]) => `${label} ${item} x ${amt}n`);
@@ -320,6 +326,32 @@ const buildMessages = (stats, options = {}) => {
   const xq3Msg = groupXqByLen(labels.xq3, stats.xienquay, 3);
   const xq4Msg = groupXqByLen(labels.xq4, stats.xienquay, 4);
   const xienNhayMsg = groupXiNhay(labels.xiennhay, stats.xien);
+
+  // Kiểm tra xem có dữ liệu cược nào không
+  const hasAnyData = lotoMsg || twoSMsg || threeSMsg || fourSMsg || tongMsg ||
+    dauMsg || ditMsg || kepMsg || boMsg || x2Msg || x3Msg ||
+    x4Msg || xq3Msg || xq4Msg || xienNhayMsg;
+
+  // Nếu không có dữ liệu gì, trả về message đặc biệt
+  if (!hasAnyData) {
+    return {
+      loto: 'Không có cược trong thời gian này',
+      twoS: '',
+      threeS: '',
+      fourS: '',
+      tong: '',
+      dau: '',
+      dit: '',
+      kep: '',
+      bo: '',
+      xien2: '',
+      xien3: '',
+      xien4: '',
+      xienq3: '',
+      xienq4: '',
+      xiennhay: ''
+    };
+  }
 
   return {
     loto: lotoMsg,
