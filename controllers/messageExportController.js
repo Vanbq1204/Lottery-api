@@ -198,7 +198,21 @@ const buildMessages = (stats, options = {}) => {
   const tongMsg = groupLines(labels.tong, stats.grouped.tong);
   const dauMsg = groupLines(labels.dau, stats.grouped.dau);
   const ditMsg = groupLines(labels.dit, stats.grouped.dit);
-  const kepMsg = groupLinesNoAccent(labels.kep, stats.grouped.kep);
+  const kepMsg = (() => {
+    const map = stats.grouped.kep || {};
+    const totals = new Map();
+    Object.entries(map).forEach(([k, v]) => {
+      let a = parseInt(v) || 0; if (a <= 0) return;
+      a = Math.round(a * multiplier);
+      const item = removeAccents(String(k)).toLowerCase().trim();
+      totals.set(item, (totals.get(item) || 0) + a);
+    });
+    const label = removeAccents(String(labels.kep || 'Kep')).toLowerCase();
+    const lines = Array.from(totals.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([item, amt]) => `${label} ${item} x ${amt}n`);
+    return lines.join('\n');
+  })();
   // Tách BO: số (00-99) gộp theo mức tiền, và tên đặc biệt tách dòng riêng
   const boMap = stats.grouped.bo || {};
   const numericBo = {};
