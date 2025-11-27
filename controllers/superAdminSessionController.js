@@ -27,4 +27,30 @@ const forceRelogin = async (req, res) => {
   }
 };
 
-module.exports = { getForceReloginStatus, forceRelogin };
+// Kích hoạt reload trang toàn hệ thống
+const forceReload = async (req, res) => {
+  try {
+    const io = req.app.get('socketio');
+    if (!io) {
+      return res.status(500).json({ success: false, message: 'Socket.io not available' });
+    }
+
+    // Broadcast event reload đến tất cả clients
+    io.emit('force-reload', {
+      message: 'SuperAdmin đã yêu cầu reload trang',
+      timestamp: new Date().toISOString()
+    });
+
+    console.log('🔄 Force reload event broadcasted to all clients');
+
+    return res.json({
+      success: true,
+      message: 'Đã gửi yêu cầu reload trang đến tất cả người dùng'
+    });
+  } catch (err) {
+    console.error('Error force reload:', err);
+    return res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
+module.exports = { getForceReloginStatus, forceRelogin, forceReload };
