@@ -47,6 +47,15 @@ const storeSchema = new mongoose.Schema({
   lastResetDate: {
     type: Date,
     default: Date.now
+  },
+  // Thời hạn sử dụng
+  startDate: {
+    type: Date,
+    default: Date.now
+  },
+  endDate: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

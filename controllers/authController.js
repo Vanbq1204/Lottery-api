@@ -50,6 +50,20 @@ const login = async (req, res) => {
       });
     }
 
+    // Kiểm tra hết hạn cho employee (nhân viên)
+    if (user.role === 'employee' && user.storeId) {
+      const store = await Store.findById(user.storeId);
+      if (store && store.endDate) {
+        const now = new Date();
+        if (new Date(store.endDate) < now) {
+          return res.status(401).json({
+            success: false,
+            message: 'Tài khoản đã hết hạn. Vui lòng liên hệ quản trị viên để gia hạn.'
+          });
+        }
+      }
+    }
+
     // Cập nhật last login
     user.lastLogin = new Date();
     await user.save();

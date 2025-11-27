@@ -8,35 +8,37 @@ const { getVietnamDayRange } = require('../utils/dateUtils');
 const getMyStores = async (req, res) => {
   try {
     const adminId = req.user.id;
-    
+
     // Tìm các cửa hàng mà admin này quản lý
     const stores = await Store.find({ adminId: adminId });
-    
+
     // Lấy thông tin nhân viên cho mỗi cửa hàng
     const storesWithEmployees = await Promise.all(
       stores.map(async (store) => {
         // Tìm nhân viên thuộc cửa hàng này
-        const employees = await User.find({ 
+        const employees = await User.find({
           storeId: store._id,
-          role: 'employee' 
+          role: 'employee'
         }).select('name username');
-        
+
         return {
           _id: store._id,
           name: store.name,
           address: store.address,
           phone: store.phone,
           employees: employees,
+          startDate: store.startDate,
+          endDate: store.endDate,
           createdAt: store.createdAt
         };
       })
     );
-    
+
     res.json({
       success: true,
       stores: storesWithEmployees
     });
-    
+
   } catch (error) {
     console.error('Lỗi lấy danh sách cửa hàng:', error);
     res.status(500).json({
@@ -51,26 +53,26 @@ const getStoreDetail = async (req, res) => {
   try {
     const { storeId } = req.params;
     const adminId = req.user.id;
-    
+
     // Kiểm tra admin có quyền truy cập cửa hàng này không
-    const store = await Store.findOne({ 
-      _id: storeId, 
-      adminId: adminId 
+    const store = await Store.findOne({
+      _id: storeId,
+      adminId: adminId
     });
-    
+
     if (!store) {
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy cửa hàng hoặc bạn không có quyền truy cập'
       });
     }
-    
+
     // Lấy thông tin nhân viên
-    const employees = await User.find({ 
+    const employees = await User.find({
       storeId: store._id,
-      role: 'employee' 
+      role: 'employee'
     }).select('name username email phone createdAt');
-    
+
     res.json({
       success: true,
       store: {
@@ -82,7 +84,7 @@ const getStoreDetail = async (req, res) => {
         createdAt: store.createdAt
       }
     });
-    
+
   } catch (error) {
     console.error('Lỗi lấy chi tiết cửa hàng:', error);
     res.status(500).json({
@@ -97,7 +99,7 @@ const getStoreStatistics = async (req, res) => {
   try {
     const { storeId, date } = req.query;
     const adminId = req.user.id;
-    
+
     if (!storeId || !date) {
       return res.status(400).json({
         success: false,
@@ -106,7 +108,7 @@ const getStoreStatistics = async (req, res) => {
     }
 
     // Kiểm tra quyền admin với cửa hàng này
-    const store = await Store.findOne({ 
+    const store = await Store.findOne({
       _id: new mongoose.Types.ObjectId(storeId),
       adminId: new mongoose.Types.ObjectId(adminId)
     });

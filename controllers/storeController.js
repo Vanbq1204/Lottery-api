@@ -9,28 +9,28 @@ const getStoresByAdmin = async (req, res) => {
   try {
     const { adminId } = req.params;
     const superAdminId = req.user.id;
-    
+
     // Kiểm tra admin có thuộc về superadmin này không
     const admin = await User.findOne({
       _id: new mongoose.Types.ObjectId(adminId),
       role: 'admin',
       parentId: new mongoose.Types.ObjectId(superAdminId)
     });
-    
+
     if (!admin) {
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy admin hoặc bạn không có quyền truy cập'
       });
     }
-    
+
     // Lấy danh sách stores và populate employee info
     const stores = await Store.find({ adminId: new mongoose.Types.ObjectId(adminId) })
       .populate({
         path: 'employees',
         select: 'username name email isActive allowChangePassword'
       });
-    
+
     const storesWithEmployees = stores.map(store => {
       const employee = store.employees[0]; // Giả định mỗi store có 1 employee chính
       return {
@@ -44,16 +44,18 @@ const getStoresByAdmin = async (req, res) => {
         employeeUsername: employee?.username || '',
         employeeId: employee?._id || null,
         allowChangePassword: employee?.allowChangePassword ?? true,
+        startDate: store.startDate,
+        endDate: store.endDate,
         createdAt: store.createdAt,
         updatedAt: store.updatedAt
       };
     });
-    
+
     res.json({
       success: true,
       stores: storesWithEmployees
     });
-    
+
   } catch (error) {
     console.error('Lỗi lấy danh sách cửa hàng:', error);
     res.status(500).json({
@@ -67,19 +69,21 @@ const getStoresByAdmin = async (req, res) => {
 const createStore = async (req, res) => {
   try {
     const superAdminId = req.user.id;
-    const { 
-      adminId, 
-      username, 
-      password, 
-      employeeName, 
-      storeName, 
-      storeAddress, 
-      storePhone, 
+    const {
+      adminId,
+      username,
+      password,
+      employeeName,
+      storeName,
+      storeAddress,
+      storePhone,
       isActive,
       allowChangePassword,
-      showLotteryResults
+      showLotteryResults,
+      startDate,
+      endDate
     } = req.body;
-    
+
     // Validate input
     if (!adminId || !username || !password || !employeeName || !storeName) {
       return res.status(400).json({
@@ -87,21 +91,21 @@ const createStore = async (req, res) => {
         message: 'Vui lòng điền đầy đủ thông tin: adminId, username, password, employeeName, storeName'
       });
     }
-    
+
     // Kiểm tra admin có thuộc về superadmin này không
     const admin = await User.findOne({
       _id: new mongoose.Types.ObjectId(adminId),
       role: 'admin',
       parentId: new mongoose.Types.ObjectId(superAdminId)
     });
-    
+
     if (!admin) {
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy admin hoặc bạn không có quyền'
       });
     }
-    
+
     // Kiểm tra username employee đã tồn tại chưa
     const existingEmployee = await User.findOne({ username });
     if (existingEmployee) {
@@ -110,7 +114,15 @@ const createStore = async (req, res) => {
         message: 'Username nhân viên đã tồn tại'
       });
     }
-    
+
+    // Validate expiration dates if provided
+    if (endDate && startDate && new Date(endDate) <= new Date(startDate)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ngày kết thúc phải sau ngày bắt đầu'
+      });
+    }
+
     // Tạo store trước
     const newStore = new Store({
       name: storeName,
@@ -118,11 +130,13 @@ const createStore = async (req, res) => {
       phone: storePhone || '',
       adminId: new mongoose.Types.ObjectId(adminId),
       isActive: isActive !== undefined ? isActive : true,
-      showLotteryResults: !!showLotteryResults
+      showLotteryResults: !!showLotteryResults,
+      startDate: startDate ? new Date(startDate) : new Date(),
+      endDate: endDate ? new Date(endDate) : null
     });
-    
+
     await newStore.save();
-    
+
     // Tạo employee
     const newEmployee = new User({
       username,
@@ -136,13 +150,13 @@ const createStore = async (req, res) => {
       allowChangePassword: allowChangePassword !== undefined ? !!allowChangePassword : true,
       createdBy: new mongoose.Types.ObjectId(superAdminId)
     });
-    
+
     await newEmployee.save();
-    
+
     // Thêm employee vào store
     newStore.employees.push(newEmployee._id);
     await newStore.save();
-    
+
     // Khởi tạo hệ số thưởng cho store mới
     console.log(`🎯 Khởi tạo hệ số thưởng cho store mới: ${newStore.name}`);
     try {
@@ -152,7 +166,7 @@ const createStore = async (req, res) => {
       console.error(`⚠️  Lỗi khởi tạo hệ số thưởng cho store ${newStore.name}:`, multiplierError);
       // Không throw error để không làm fail việc tạo store
     }
-    
+
     // Khởi tạo hệ số lô cho store mới
     console.log(`🎯 Khởi tạo hệ số lô cho store mới: ${newStore.name}`);
     try {
@@ -162,7 +176,7 @@ const createStore = async (req, res) => {
       console.error(`⚠️  Lỗi khởi tạo hệ số lô cho store ${newStore.name}:`, lotoMultiplierError);
       // Không throw error để không làm fail việc tạo store
     }
-    
+
     res.json({
       success: true,
       message: 'Tạo cửa hàng và nhân viên thành công',
@@ -177,7 +191,7 @@ const createStore = async (req, res) => {
         employeeUsername: newEmployee.username
       }
     });
-    
+
   } catch (error) {
     console.error('Lỗi tạo cửa hàng:', error);
     res.status(500).json({
@@ -192,8 +206,8 @@ const updateStore = async (req, res) => {
   try {
     const { storeId } = req.params;
     const superAdminId = req.user.id;
-    const { employeeName, storeName, storeAddress, storePhone, password, isActive, allowChangePassword, showLotteryResults } = req.body;
-    
+    const { employeeName, storeName, storeAddress, storePhone, password, isActive, allowChangePassword, showLotteryResults, startDate, endDate } = req.body;
+
     // Validate input
     if (!employeeName || !storeName) {
       return res.status(400).json({
@@ -201,7 +215,7 @@ const updateStore = async (req, res) => {
         message: 'Vui lòng điền đầy đủ thông tin: employeeName, storeName'
       });
     }
-    
+
     // Tìm store và kiểm tra quyền
     const store = await Store.findById(storeId).populate('adminId');
     if (!store) {
@@ -210,7 +224,7 @@ const updateStore = async (req, res) => {
         message: 'Không tìm thấy cửa hàng'
       });
     }
-    
+
     // Kiểm tra admin có thuộc về superadmin này không
     if (!store.adminId.parentId.equals(superAdminId)) {
       return res.status(403).json({
@@ -218,15 +232,25 @@ const updateStore = async (req, res) => {
         message: 'Bạn không có quyền cập nhật cửa hàng này'
       });
     }
-    
+
+    // Validate expiration dates if provided
+    if (endDate && startDate && new Date(endDate) <= new Date(startDate)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ngày kết thúc phải sau ngày bắt đầu'
+      });
+    }
+
     // Cập nhật store
     store.name = storeName;
     store.address = storeAddress || '';
     store.phone = storePhone || '';
     if (isActive !== undefined) store.isActive = isActive;
     if (showLotteryResults !== undefined) store.showLotteryResults = !!showLotteryResults;
+    if (startDate !== undefined) store.startDate = new Date(startDate);
+    if (endDate !== undefined) store.endDate = endDate ? new Date(endDate) : null;
     await store.save();
-    
+
     // Cập nhật employee (nhân viên đầu tiên trong danh sách)
     if (store.employees.length > 0) {
       const employee = await User.findById(store.employees[0]);
@@ -239,12 +263,12 @@ const updateStore = async (req, res) => {
         await employee.save();
       }
     }
-    
+
     res.json({
       success: true,
       message: 'Cập nhật cửa hàng thành công'
     });
-    
+
   } catch (error) {
     console.error('Lỗi cập nhật cửa hàng:', error);
     res.status(500).json({
@@ -259,7 +283,7 @@ const deleteStore = async (req, res) => {
   try {
     const { storeId } = req.params;
     const superAdminId = req.user.id;
-    
+
     // Tìm store và kiểm tra quyền
     const store = await Store.findById(storeId).populate('adminId');
     if (!store) {
@@ -268,7 +292,7 @@ const deleteStore = async (req, res) => {
         message: 'Không tìm thấy cửa hàng'
       });
     }
-    
+
     // Kiểm tra admin có thuộc về superadmin này không
     if (!store.adminId.parentId.equals(superAdminId)) {
       return res.status(403).json({
@@ -276,7 +300,7 @@ const deleteStore = async (req, res) => {
         message: 'Bạn không có quyền xóa cửa hàng này'
       });
     }
-    
+
     // Xóa tất cả employees trong store
     await User.deleteMany({ _id: { $in: store.employees } });
 
@@ -291,15 +315,15 @@ const deleteStore = async (req, res) => {
     const LotoMultiplier = require('../models/LotoMultiplier');
     await PrizeMultiplier.deleteMany({ storeId: store._id });
     await LotoMultiplier.deleteMany({ storeId: store._id });
-    
+
     // Xóa store
     await Store.deleteOne({ _id: storeId });
-    
+
     res.json({
       success: true,
       message: 'Xóa cửa hàng và nhân viên thành công'
     });
-    
+
   } catch (error) {
     console.error('Lỗi xóa cửa hàng:', error);
     res.status(500).json({
