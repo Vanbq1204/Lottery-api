@@ -33,21 +33,44 @@ const checkBettingTimeAllowed = async (req, res, next) => {
     const currentTime = getCurrentVietnamTime();
     const allowed = isBeforeCutoffTime(timeSettings.bettingCutoffTime);
 
-    if (!allowed) {
+    // Nếu chưa quá thời gian giới hạn, cho phép tất cả
+    if (allowed) {
+      req.bettingTimeInfo = {
+        cutoffTime: timeSettings.bettingCutoffTime,
+        currentTime: currentTime,
+        adminId: adminId.toString()
+      };
+      return next();
+    }
+
+    // Đã quá thời gian giới hạn - kiểm tra loại cược
+    // Danh sách loại cược bị hạn chế sau bettingCutoffTime
+    const restrictedBetTypes = ['2s', '3s', 'tong', 'kep', 'dau', 'dit', '4s', 'bo'];
+
+    // Kiểm tra xem hóa đơn có chứa loại cược bị hạn chế không
+    // Dữ liệu được gửi lên dưới dạng items array
+    const items = req.body.items || [];
+    const hasRestrictedBets = items.some(item => {
+      return restrictedBetTypes.includes(item.betType);
+    });
+
+    // Chỉ chặn nếu có loại cược bị hạn chế
+    if (hasRestrictedBets) {
       return res.status(403).json({
         success: false,
-        message: `Hóa đơn này sẽ không được lưu vì đã quá thời gian quy định (${timeSettings.bettingCutoffTime}). Hiện tại: ${currentTime}`,
+        message: `Không thể nhập 2 số, 3 số, tổng, kép, đầu, đít, 4 số, bộ vì đã quá thời gian quy định (${timeSettings.bettingCutoffTime}). Hiện tại: ${currentTime}. Bạn vẫn có thể nhập lô, xiên, xiên quay.`,
         cutoffTime: timeSettings.bettingCutoffTime,
         currentTime: currentTime,
         code: 'BETTING_TIME_EXPIRED'
       });
     }
 
-    // Thêm thông tin thời gian vào request để log
+    // Nếu chỉ có lô, xiên, xiên quay - cho phép
     req.bettingTimeInfo = {
       cutoffTime: timeSettings.bettingCutoffTime,
       currentTime: currentTime,
-      adminId: adminId.toString()
+      adminId: adminId.toString(),
+      allowedAfterCutoff: true // Đánh dấu là được phép sau thời gian giới hạn
     };
 
     next();
