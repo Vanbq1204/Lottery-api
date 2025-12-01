@@ -3,6 +3,7 @@ const WinningInvoice = require('../models/WinningInvoice');
 const Store = require('../models/Store');
 const User = require('../models/User');
 const mongoose = require('mongoose');
+const MessageExportSnapshot = require('../models/MessageExportSnapshot');
 const { getVietnamDayRange } = require('../utils/dateUtils');
 
 // Helper: get Vietnam current date (YYYY-MM-DD)
@@ -61,9 +62,16 @@ const getSuperAdminCleanupStats = async (req, res) => {
       // Lấy stores của admin này
       const stores = await Store.find({ adminId: admin._id }).select('_id name');
 
+      // Đếm số lượng bản ghi xuất tin nhắn của admin trong ngày này
+      const totalSnapshots = await MessageExportSnapshot.countDocuments({
+        adminId: admin._id,
+        date
+      });
+
       const adminData = {
         adminId: admin._id,
         adminName: admin.name || admin.username,
+        totalSnapshots,
         stores: []
       };
 
@@ -128,16 +136,23 @@ const performSuperAdminCleanup = async (req, res) => {
       createdAt: { $gte: startOfDay, $lte: endOfDay }
     });
 
-    // Note: We do NOT delete MessageExportSnapshot here because it's per-admin, 
-    // and we are deleting per-store. Deleting snapshots might be misleading if only some stores are cleaned.
-    // However, if the user wants to clean up, they usually clean up everything. 
-    // For now, let's keep snapshots as they are less critical and per-admin.
+    // Xóa MessageExportSnapshot cho các admin liên quan đến các store được chọn
+    // 1. Tìm các adminId từ danh sách storeIds
+    const stores = await Store.find({ _id: { $in: storeIds } }).select('adminId');
+    const adminIds = [...new Set(stores.map(s => s.adminId.toString()))];
+
+    // 2. Xóa snapshot của các admin này
+    const deletedSnapshotsResult = await MessageExportSnapshot.deleteMany({
+      adminId: { $in: adminIds },
+      date
+    });
 
     return res.json({
       success: true,
       message: 'Xóa dữ liệu thành công',
       deletedInvoices: deletedInvoicesResult.deletedCount,
-      deletedWinningInvoices: deletedWinningInvoicesResult.deletedCount
+      deletedWinningInvoices: deletedWinningInvoicesResult.deletedCount,
+      deletedSnapshots: deletedSnapshotsResult.deletedCount
     });
   } catch (error) {
     console.error('SuperAdmin perform cleanup error:', error);
