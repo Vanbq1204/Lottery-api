@@ -32,18 +32,14 @@ const isDateDeletable = (dateStr) => {
   return (dateStr !== todayStr && dateStr !== yesterdayStr);
 };
 
-// GET /api/superadmin/cleanup/stats?adminId=...&date=YYYY-MM-DD
+// GET /api/superadmin/cleanup/stats?date=YYYY-MM-DD
 const getSuperAdminCleanupStats = async (req, res) => {
   try {
-    const { adminId, date } = req.query;
+    const { date } = req.query;
+    const superAdminId = req.user.id;
 
-    if (!adminId || !date) {
-      return res.status(400).json({ success: false, message: 'Thiếu tham số adminId hoặc date' });
-    }
-
-    const admin = await User.findOne({ _id: new mongoose.Types.ObjectId(adminId), role: 'admin' });
-    if (!admin) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy admin' });
+    if (!date) {
+      return res.status(400).json({ success: false, message: 'Thiếu tham số date' });
     }
 
     // Validate retention rule
@@ -53,40 +49,65 @@ const getSuperAdminCleanupStats = async (req, res) => {
 
     const { startOfDay, endOfDay } = getVietnamDayRange(date);
 
-    const stores = await Store.find({ adminId: admin._id }).select('_id');
-    const storeIds = stores.map(s => s._id);
+    // Lấy tất cả admin của superadmin này
+    const admins = await User.find({
+      role: 'admin',
+      parentId: new mongoose.Types.ObjectId(superAdminId)
+    }).select('_id name username');
 
-    if (storeIds.length === 0) {
-      return res.json({ success: true, stats: { totalInvoices: 0, totalWinningInvoices: 0, affectedStores: 0 } });
+    const result = [];
+
+    for (const admin of admins) {
+      // Lấy stores của admin này
+      const stores = await Store.find({ adminId: admin._id }).select('_id name');
+
+      const adminData = {
+        adminId: admin._id,
+        adminName: admin.name || admin.username,
+        stores: []
+      };
+
+      for (const store of stores) {
+        // Đếm tổng số hóa đơn trúng thưởng
+        const totalWinningInvoices = await WinningInvoice.countDocuments({
+          storeId: store._id,
+          createdAt: { $gte: startOfDay, $lte: endOfDay }
+        });
+
+        // Đếm số hóa đơn trúng thưởng ĐÃ TRẢ
+        const paidWinningInvoices = await WinningInvoice.countDocuments({
+          storeId: store._id,
+          isPaid: true,
+          createdAt: { $gte: startOfDay, $lte: endOfDay }
+        });
+
+        adminData.stores.push({
+          storeId: store._id,
+          storeName: store.name,
+          totalWinningInvoices,
+          paidWinningInvoices
+        });
+      }
+
+      result.push(adminData);
     }
 
-    const totalInvoices = await Invoice.countDocuments({ storeId: { $in: storeIds }, createdAt: { $gte: startOfDay, $lte: endOfDay } });
-    const totalWinningInvoices = await WinningInvoice.countDocuments({ storeId: { $in: storeIds }, createdAt: { $gte: startOfDay, $lte: endOfDay } });
-    const totalSnapshots = await require('../models/MessageExportSnapshot').countDocuments({ adminId: admin._id, date });
-
-    const affectedStoresInvoices = await Invoice.distinct('storeId', { storeId: { $in: storeIds }, createdAt: { $gte: startOfDay, $lte: endOfDay } });
-    const affectedStoresWinning = await WinningInvoice.distinct('storeId', { storeId: { $in: storeIds }, createdAt: { $gte: startOfDay, $lte: endOfDay } });
-    const affectedStores = new Set([...affectedStoresInvoices, ...affectedStoresWinning]).size;
-
-    return res.json({ success: true, stats: { totalInvoices, totalWinningInvoices, totalSnapshots, affectedStores } });
+    return res.json({ success: true, data: result });
   } catch (error) {
     console.error('SuperAdmin cleanup stats error:', error);
     return res.status(500).json({ success: false, message: 'Lỗi server khi lấy thống kê dữ liệu' });
   }
 };
 
-// DELETE /api/superadmin/cleanup?adminId=...&date=YYYY-MM-DD
+// DELETE /api/superadmin/cleanup
+// Body: { date: 'YYYY-MM-DD', storeIds: ['id1', 'id2'] }
 const performSuperAdminCleanup = async (req, res) => {
   try {
-    const { adminId, date } = req.query;
+    const { date, storeIds } = req.body; // Use body for array data
+    const superAdminId = req.user.id;
 
-    if (!adminId || !date) {
-      return res.status(400).json({ success: false, message: 'Thiếu tham số adminId hoặc date' });
-    }
-
-    const admin = await User.findOne({ _id: new mongoose.Types.ObjectId(adminId), role: 'admin' });
-    if (!admin) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy admin' });
+    if (!date || !storeIds || !Array.isArray(storeIds) || storeIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Thiếu tham số date hoặc danh sách storeIds' });
     }
 
     // Validate retention rule
@@ -95,18 +116,29 @@ const performSuperAdminCleanup = async (req, res) => {
     }
 
     const { startOfDay, endOfDay } = getVietnamDayRange(date);
-    const stores = await Store.find({ adminId: admin._id }).select('_id');
-    const storeIds = stores.map(s => s._id);
 
-    if (storeIds.length === 0) {
-      return res.json({ success: true, message: 'Không có cửa hàng nào thuộc admin này', deletedInvoices: 0, deletedWinningInvoices: 0 });
-    }
+    // Thực hiện xóa hàng loạt cho các store được chọn
+    const deletedInvoicesResult = await Invoice.deleteMany({
+      storeId: { $in: storeIds },
+      createdAt: { $gte: startOfDay, $lte: endOfDay }
+    });
 
-    const deletedInvoicesResult = await Invoice.deleteMany({ storeId: { $in: storeIds }, createdAt: { $gte: startOfDay, $lte: endOfDay } });
-    const deletedWinningInvoicesResult = await WinningInvoice.deleteMany({ storeId: { $in: storeIds }, createdAt: { $gte: startOfDay, $lte: endOfDay } });
-    const deletedSnapshotsResult = await require('../models/MessageExportSnapshot').deleteMany({ adminId: admin._id, date });
+    const deletedWinningInvoicesResult = await WinningInvoice.deleteMany({
+      storeId: { $in: storeIds },
+      createdAt: { $gte: startOfDay, $lte: endOfDay }
+    });
 
-    return res.json({ success: true, message: 'Xóa dữ liệu thành công', deletedInvoices: deletedInvoicesResult.deletedCount, deletedWinningInvoices: deletedWinningInvoicesResult.deletedCount, deletedSnapshots: deletedSnapshotsResult.deletedCount });
+    // Note: We do NOT delete MessageExportSnapshot here because it's per-admin, 
+    // and we are deleting per-store. Deleting snapshots might be misleading if only some stores are cleaned.
+    // However, if the user wants to clean up, they usually clean up everything. 
+    // For now, let's keep snapshots as they are less critical and per-admin.
+
+    return res.json({
+      success: true,
+      message: 'Xóa dữ liệu thành công',
+      deletedInvoices: deletedInvoicesResult.deletedCount,
+      deletedWinningInvoices: deletedWinningInvoicesResult.deletedCount
+    });
   } catch (error) {
     console.error('SuperAdmin perform cleanup error:', error);
     return res.status(500).json({ success: false, message: 'Lỗi server khi xóa dữ liệu' });

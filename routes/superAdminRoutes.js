@@ -43,6 +43,9 @@ router.delete('/stores/:storeId', authenticateToken, requireSuperAdmin, deleteSt
 const { getSystemStatistics, getAdminStoreStatistics } = require('../controllers/superAdminSystemStatsController');
 const { getForceReloginStatus, forceRelogin, forceReload } = require('../controllers/superAdminSessionController');
 const { getSuperAdminCleanupStats, performSuperAdminCleanup } = require('../controllers/superAdminCleanupController');
+console.log('Loading superAdminRoutes...');
+console.log('getSuperAdminCleanupStats:', typeof getSuperAdminCleanupStats);
+console.log('performSuperAdminCleanup:', typeof performSuperAdminCleanup);
 const { getLotteryHistory, deleteLotteryHistoryByDate } = require('../controllers/superAdminLotteryHistoryController');
 router.get('/system-statistics', authenticateToken, requireSuperAdmin, getSystemStatistics);
 router.get('/system-statistics/stores', authenticateToken, requireSuperAdmin, getAdminStoreStatistics);
