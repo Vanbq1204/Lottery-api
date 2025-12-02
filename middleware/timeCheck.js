@@ -25,7 +25,8 @@ const checkBettingTimeAllowed = async (req, res, next) => {
     const timeSettings = await TimeSettings.findOne({ adminId });
 
     // Nếu không có cài đặt hoặc không kích hoạt, cho phép
-    if (!timeSettings || !timeSettings.isActive) {
+    // HOẶC nếu cửa hàng không áp dụng giới hạn thời gian, cho phép
+    if (!timeSettings || !timeSettings.isActive || !store.applyBettingTimeLimit) {
       return next();
     }
 
@@ -105,7 +106,8 @@ const checkEditDeleteTimeAllowed = async (req, res, next) => {
     const timeSettings = await TimeSettings.findOne({ adminId });
 
     // Nếu không có cài đặt hoặc không kích hoạt giới hạn sửa/xóa, cho phép
-    if (!timeSettings || !timeSettings.editDeleteLimitActive) {
+    // HOẶC nếu cửa hàng không áp dụng giới hạn thời gian, cho phép
+    if (!timeSettings || !timeSettings.editDeleteLimitActive || !store.applyBettingTimeLimit) {
       return next();
     }
 

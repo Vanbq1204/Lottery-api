@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getMyStores, getStoreDetail, getStoreStatistics } = require('../controllers/adminController');
+const { getMyStores, getStoreDetail, getStoreStatistics, updateStoreTimeSettings } = require('../controllers/adminController');
 const { getAdminTotalStatistics } = require('../controllers/adminTotalStatsController');
 const { getAdminPrizeStatistics } = require('../controllers/adminPrizeStatsController');
 const { getStorePrizeStatistics } = require('../controllers/adminStorePrizeStatsController');
@@ -29,6 +29,9 @@ router.get('/stores/:storeId', authenticateToken, requireAdmin, getStoreDetail);
 
 // Route lấy thống kê cửa hàng
 router.get('/store-statistics', authenticateToken, requireAdmin, getStoreStatistics);
+
+// Route cập nhật cài đặt thời gian cho cửa hàng cụ thể
+router.put('/stores/:storeId/time-settings', authenticateToken, requireAdmin, updateStoreTimeSettings);
 
 // Route lấy thống kê tổng hợp của admin
 router.get('/total-statistics', authenticateToken, requireAdmin, getAdminTotalStatistics);

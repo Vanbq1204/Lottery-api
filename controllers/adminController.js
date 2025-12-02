@@ -29,6 +29,7 @@ const getMyStores = async (req, res) => {
           employees: employees,
           startDate: store.startDate,
           endDate: store.endDate,
+          applyBettingTimeLimit: store.applyBettingTimeLimit,
           createdAt: store.createdAt
         };
       })
@@ -343,7 +344,50 @@ const getStoreStatistics = async (req, res) => {
     console.error('Lỗi thống kê cửa hàng:', error);
     res.status(500).json({
       success: false,
-      message: 'Lỗi server khi thống kê cửa hàng'
+    });
+  }
+};
+
+
+// Cập nhật cài đặt thời gian cho cửa hàng cụ thể
+const updateStoreTimeSettings = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { applyBettingTimeLimit } = req.body;
+    const adminId = req.user.id;
+
+    // Kiểm tra admin có quyền với cửa hàng này không
+    const store = await Store.findOne({
+      _id: new mongoose.Types.ObjectId(storeId),
+      adminId: new mongoose.Types.ObjectId(adminId)
+    });
+
+    if (!store) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn không có quyền truy cập cửa hàng này'
+      });
+    }
+
+    // Cập nhật cài đặt
+    store.applyBettingTimeLimit = applyBettingTimeLimit;
+    await store.save();
+
+    res.json({
+      success: true,
+      message: 'Cập nhật cài đặt thời gian thành công',
+      store: {
+        _id: store._id,
+        name: store.name,
+        applyBettingTimeLimit: store.applyBettingTimeLimit
+      }
+    });
+
+  } catch (error) {
+    console.error('Lỗi cập nhật cài đặt thời gian cửa hàng:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi cập nhật cài đặt thời gian'
     });
   }
 };
@@ -351,5 +395,6 @@ const getStoreStatistics = async (req, res) => {
 module.exports = {
   getMyStores,
   getStoreDetail,
-  getStoreStatistics
+  getStoreStatistics,
+  updateStoreTimeSettings
 };

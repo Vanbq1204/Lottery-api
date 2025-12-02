@@ -56,6 +56,11 @@ const storeSchema = new mongoose.Schema({
   endDate: {
     type: Date,
     default: null
+  },
+  // Áp dụng giới hạn thời gian nhập cược
+  applyBettingTimeLimit: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true
