@@ -47,6 +47,10 @@ const invoiceHistorySchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  locationAddress: {
+    type: String,
+    default: ''
+  },
   actionDate: {
     type: Date,
     default: Date.now

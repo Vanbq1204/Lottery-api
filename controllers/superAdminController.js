@@ -25,6 +25,7 @@ const getAllAdmins = async (req, res) => {
         isActive: admin.isActive,
         allowChangePassword: admin.allowChangePassword,
         allowMessageExport: admin.allowMessageExport,
+        requireLocation: admin.requireLocation,
         storeId: admin.storeId?._id,
         storeName: admin.storeId?.name,
         storeAddress: admin.storeId?.address,
@@ -45,7 +46,7 @@ const getAllAdmins = async (req, res) => {
 // Tạo tài khoản admin mới
 const createAdmin = async (req, res) => {
   try {
-    const { username, password, name, email, storeId, allowChangePassword, allowMessageExport } = req.body;
+    const { username, password, name, email, storeId, allowChangePassword, allowMessageExport, requireLocation } = req.body;
     const superAdminId = req.user.id;
 
     // Validate input
@@ -118,6 +119,7 @@ const createAdmin = async (req, res) => {
     // Quyền UI
     adminData.allowChangePassword = allowChangePassword !== undefined ? !!allowChangePassword : true;
     adminData.allowMessageExport = allowMessageExport !== undefined ? !!allowMessageExport : true;
+    adminData.requireLocation = requireLocation !== undefined ? !!requireLocation : true;
 
     console.log('Creating admin with data:', adminData);
     const newAdmin = new User(adminData);
@@ -160,7 +162,7 @@ const createAdmin = async (req, res) => {
 const updateAdmin = async (req, res) => {
   try {
     const { adminId } = req.params;
-    const { name, email, isActive, password, allowChangePassword, allowMessageExport } = req.body;
+    const { name, email, isActive, password, allowChangePassword, allowMessageExport, requireLocation } = req.body;
     const superAdminId = req.user.id;
 
     // Kiểm tra admin tồn tại và thuộc về superadmin này
@@ -217,6 +219,7 @@ const updateAdmin = async (req, res) => {
     if (isActive !== undefined) adminToUpdate.isActive = isActive;
     if (allowChangePassword !== undefined) adminToUpdate.allowChangePassword = !!allowChangePassword;
     if (allowMessageExport !== undefined) adminToUpdate.allowMessageExport = !!allowMessageExport;
+    if (requireLocation !== undefined) adminToUpdate.requireLocation = !!requireLocation;
 
     await adminToUpdate.save(); // Trigger pre('save') hook
 

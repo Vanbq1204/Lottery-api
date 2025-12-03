@@ -586,7 +586,8 @@ const editInvoice = async (req, res) => {
       totalAmount,
       customerPaid,
       changeAmount,
-      reason
+      reason,
+      locationAddress
     } = req.body;
 
     const employeeId = req.user.id;
@@ -684,7 +685,9 @@ const editInvoice = async (req, res) => {
       changes,
       oldData,
       newData,
-      reason: reason || 'Sửa đổi hóa đơn'
+      newData,
+      reason: reason || 'Sửa đổi hóa đơn',
+      locationAddress: locationAddress || ''
     });
 
     await history.save();
@@ -738,7 +741,7 @@ const editInvoice = async (req, res) => {
 const deleteInvoice = async (req, res) => {
   try {
     const { invoiceId } = req.params;
-    const { reason } = req.body;
+    const { reason, locationAddress } = req.body;
 
     const employeeId = req.user.id;
     const employee = await User.findById(employeeId);
@@ -799,7 +802,8 @@ const deleteInvoice = async (req, res) => {
       changes: { action: 'deleted' },
       oldData,
       newData: {},
-      reason: reason || 'Xóa hóa đơn'
+      reason: reason || 'Xóa hóa đơn',
+      locationAddress: locationAddress || ''
     });
 
     await history.save();
