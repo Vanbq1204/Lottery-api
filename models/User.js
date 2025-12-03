@@ -126,11 +126,6 @@ if (!module.exports?.schema?.path('allowMessageExport')) {
   });
 }
 
-// Yêu cầu vị trí khi sửa/xóa (áp dụng cho admin -> employee)
-if (!module.exports?.schema?.path('requireLocation')) {
-  userSchema.add({
-    requireLocation: { type: Boolean, default: true }
-  });
-}
+
 
 module.exports = mongoose.model('User', userSchema);

@@ -71,24 +71,6 @@ const login = async (req, res) => {
     // Tạo token
     const token = generateToken(user._id);
 
-    // Determine requireLocation setting
-    let requireLocation = true; // Default to true
-    if (user.role === 'admin') {
-      requireLocation = user.requireLocation;
-    } else if (user.role === 'employee' && user.storeId) {
-      // For employee, get setting from their Admin
-      try {
-        const store = await Store.findById(user.storeId);
-        if (store && store.adminId) {
-          const admin = await User.findById(store.adminId);
-          if (admin) {
-            requireLocation = admin.requireLocation;
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching admin for requireLocation:', err);
-      }
-    }
 
     // Chuẩn bị thông tin user trả về
     const userResponse = {
@@ -101,8 +83,7 @@ const login = async (req, res) => {
       storeName: user.storeName,
       storeId: user.storeId,
       allowChangePassword: user.allowChangePassword,
-      allowMessageExport: user.allowMessageExport,
-      requireLocation: requireLocation
+      allowMessageExport: user.allowMessageExport
     };
 
     res.json({
