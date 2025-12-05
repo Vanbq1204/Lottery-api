@@ -168,7 +168,7 @@ const analyzeWinningData = (winningInvoices, lotoNumbersFromKQXS = []) => {
         analyzeXienItem(item, stats.xien);
       } else if (betType.startsWith('xienquay')) {
         analyzeXienQuayItem(item, stats.xienquay);
-      } else if (['tong', 'kep', 'dau', 'dit', 'bo'].includes(betType)) {
+      } else if (['tong', 'kep', 'dau', 'dit', 'bo', 'deaA', 'dauA', 'ditA'].includes(betType)) {
         analyzeOtherItem(item, stats.others);
       }
     });

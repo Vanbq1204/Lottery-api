@@ -972,6 +972,122 @@ const calculateDitPrize = async (invoiceItem, lotteryResult, storeId) => {
   return null;
 };
 
+const calculateDeAPrize = async (invoiceItem, lotteryResult, storeId) => {
+  const specialPrize = lotteryResult.results?.gdb || lotteryResult.specialPrize;
+  if (!specialPrize) {
+    return null;
+  }
+  const firstTwoDigits = specialPrize.slice(0, 2);
+  const prizeMultiplier = (await getMultiplierByStore(storeId, 'deaA')) || { multiplier: 85 };
+  let totalWinningAmount = 0;
+  const winningDetails = [];
+  let betNumbers = [];
+  let betAmount = 0;
+  if (invoiceItem.numbers) {
+    betNumbers = invoiceItem.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+    betAmount = parseInt(invoiceItem.amount) || 0;
+    betNumbers.forEach(number => {
+      const paddedNumber = number.padStart(2, '0');
+      if (paddedNumber === firstTwoDigits) {
+        const winningAmount = betAmount * prizeMultiplier.multiplier * 1000;
+        totalWinningAmount += winningAmount;
+        winningDetails.push({ number: paddedNumber, betAmount, winningAmount });
+      }
+    });
+  }
+  if (totalWinningAmount > 0) {
+    return {
+      betType: 'deaA',
+      betTypeLabel: 'Đề A',
+      numbers: betNumbers.join(', '),
+      betAmount: betAmount,
+      winningCount: winningDetails.length,
+      multiplier: prizeMultiplier.multiplier,
+      prizeAmount: totalWinningAmount,
+      detailString: winningDetails.map(d => `Đề A ${d.number}: ${betAmount}n x ${prizeMultiplier.multiplier} = ${d.winningAmount.toLocaleString('vi-VN')} đ`).join(', ')
+    };
+  }
+  return null;
+};
+
+const calculateDauAPrize = async (invoiceItem, lotteryResult, storeId) => {
+  const specialPrize = lotteryResult.results?.gdb || lotteryResult.specialPrize;
+  if (!specialPrize) {
+    return null;
+  }
+  const firstTwoDigits = specialPrize.slice(0, 2);
+  const firstDigit = parseInt(firstTwoDigits.charAt(0));
+  const prizeMultiplier = (await getMultiplierByStore(storeId, 'deaA')) || { multiplier: 85 };
+  let totalWinningAmount = 0;
+  const winningDetails = [];
+  let betHeads = [];
+  let betAmount = 0;
+  if (invoiceItem.numbers) {
+    betHeads = invoiceItem.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+    betAmount = parseInt(invoiceItem.amount) || 0;
+    betHeads.forEach(head => {
+      const betHead = parseInt(head);
+      if (betHead === firstDigit) {
+        const winningAmount = betAmount * prizeMultiplier.multiplier * 1000;
+        totalWinningAmount += winningAmount;
+        winningDetails.push({ head: betHead, betAmount, winningAmount });
+      }
+    });
+  }
+  if (totalWinningAmount > 0) {
+    return {
+      betType: 'dauA',
+      betTypeLabel: 'Đầu A',
+      numbers: betHeads.join(', '),
+      betAmount: betAmount,
+      winningCount: winningDetails.length,
+      multiplier: prizeMultiplier.multiplier,
+      prizeAmount: totalWinningAmount,
+      detailString: winningDetails.map(d => `Đầu A ${d.head}: ${d.betAmount}n x ${prizeMultiplier.multiplier} = ${d.winningAmount.toLocaleString('vi-VN')} đ`).join(', ')
+    };
+  }
+  return null;
+};
+
+const calculateDitAPrize = async (invoiceItem, lotteryResult, storeId) => {
+  const specialPrize = lotteryResult.results?.gdb || lotteryResult.specialPrize;
+  if (!specialPrize) {
+    return null;
+  }
+  const firstTwoDigits = specialPrize.slice(0, 2);
+  const secondDigit = parseInt(firstTwoDigits.charAt(1));
+  const prizeMultiplier = (await getMultiplierByStore(storeId, 'deaA')) || { multiplier: 85 };
+  let totalWinningAmount = 0;
+  const winningDetails = [];
+  let betTails = [];
+  let betAmount = 0;
+  if (invoiceItem.numbers) {
+    betTails = invoiceItem.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+    betAmount = parseInt(invoiceItem.amount) || 0;
+    betTails.forEach(tail => {
+      const betTail = parseInt(tail);
+      if (betTail === secondDigit) {
+        const winningAmount = betAmount * prizeMultiplier.multiplier * 1000;
+        totalWinningAmount += winningAmount;
+        winningDetails.push({ tail: betTail, betAmount, winningAmount });
+      }
+    });
+  }
+  if (totalWinningAmount > 0) {
+    return {
+      betType: 'ditA',
+      betTypeLabel: 'Đít A',
+      numbers: betTails.join(', '),
+      betAmount: betAmount,
+      winningCount: winningDetails.length,
+      multiplier: prizeMultiplier.multiplier,
+      prizeAmount: totalWinningAmount,
+      detailString: winningDetails.map(d => `Đít A ${d.tail}: ${d.betAmount}n x ${prizeMultiplier.multiplier} = ${d.winningAmount.toLocaleString('vi-VN')} đ`).join(', ')
+    };
+  }
+  return null;
+};
+
 // Hàm tính thưởng cho kép
 const calculateKepPrize = async (invoiceItem, lotteryResult, storeId) => {
   // Lấy 2 số cuối của giải đặc biệt
@@ -1503,6 +1619,9 @@ const calculateInvoicePrize = async (invoice, lotteryDate, inputDate) => {
         case '2s':
           winningItem = await calculate2sPrize(item, lotteryResult, invoice.storeId);
           break;
+        case 'deaA':
+          winningItem = await calculateDeAPrize(item, lotteryResult, invoice.storeId);
+          break;
         case '3s':
           winningItem = await calculate3sPrize(item, lotteryResult, invoice.storeId);
           break;
@@ -1515,8 +1634,14 @@ const calculateInvoicePrize = async (invoice, lotteryDate, inputDate) => {
         case 'dau':
           winningItem = await calculateDauPrize(item, lotteryResult, invoice.storeId);
           break;
+        case 'dauA':
+          winningItem = await calculateDauAPrize(item, lotteryResult, invoice.storeId);
+          break;
         case 'dit':
           winningItem = await calculateDitPrize(item, lotteryResult, invoice.storeId);
+          break;
+        case 'ditA':
+          winningItem = await calculateDitAPrize(item, lotteryResult, invoice.storeId);
           break;
         case 'kep':
           winningItem = await calculateKepPrize(item, lotteryResult, invoice.storeId);
@@ -1833,6 +1958,7 @@ const initializeDefaultMultipliers = async () => {
     const defaultMultipliers = [
       { betType: 'loto', subType: null, multiplier: 80, description: 'Hệ số thưởng lô tô', isActive: true },
       { betType: '2s', subType: null, multiplier: 85, description: 'Hệ số thưởng 2 số (đề)', isActive: true },
+      { betType: 'deaA', subType: null, multiplier: 85, description: 'Hệ số thưởng Đề A/Đầu A/Đít A (chung)', isActive: true },
       
       // 5 betType riêng biệt cho 3 số
       { betType: '3s_gdb', subType: null, multiplier: 420, description: '3 số trùng giải đặc biệt', isActive: true },

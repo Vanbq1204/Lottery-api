@@ -138,24 +138,30 @@ const getStoreStatistics = async (req, res) => {
       totalRevenue: 0,
       lotoTotal: 0,
       '2sTotal': 0,
+      deaATotal: 0,
       '3sTotal': 0,
       '4sTotal': 0,
       tongTotal: 0,
       kepTotal: 0,
       dauTotal: 0,
       ditTotal: 0,
+      dauATotal: 0,
+      ditATotal: 0,
       boTotal: 0,
       tongKepDauDitBoTotal: 0, // Tổng tiền khách trả cho nhóm tổng/kép/đầu/đít/bộ
       xienTotal: 0,
       xienquayTotal: 0,
       loto: {}, // Will store loto numbers and their points
       '2s': {},
+      deaA: {},
       '3s': {},
       '4s': {},
       tong: {},
       kep: {},
       dau: {},
       dit: {},
+      dauA: {},
+      ditA: {},
       bo: {},
       xien: {},
       xienquay: {}
@@ -181,16 +187,28 @@ const getStoreStatistics = async (req, res) => {
               }
               break;
 
-            case '2s':
-              stats['2sTotal'] += betAmount;
-              if (item.numbers) {
-                const numbers = item.numbers.split(',').map(n => n.trim());
-                const amountPerNumber = item.amount || 0;
-                numbers.forEach(num => {
-                  stats['2s'][num] = (stats['2s'][num] || 0) + amountPerNumber;
-                });
-              }
-              break;
+          case '2s':
+            stats['2sTotal'] += betAmount;
+            if (item.numbers) {
+              const numbers = item.numbers.split(',').map(n => n.trim());
+              const amountPerNumber = item.amount || 0;
+              numbers.forEach(num => {
+                stats['2s'][num] = (stats['2s'][num] || 0) + amountPerNumber;
+              });
+            }
+            break;
+
+          case 'deaA':
+            // Đề A tính như 2 số
+            stats.deaATotal += betAmount;
+            if (item.numbers) {
+              const numbers = item.numbers.split(',').map(n => n.trim());
+              const amountPerNumber = item.amount || 0;
+              numbers.forEach(num => {
+                stats.deaA[num] = (stats.deaA[num] || 0) + amountPerNumber;
+              });
+            }
+            break;
 
             case '3s':
               stats['3sTotal'] += betAmount;
@@ -244,10 +262,10 @@ const getStoreStatistics = async (req, res) => {
               }
               break;
 
-            case 'dau':
-              // Sử dụng totalAmount (số tiền khách trả) thay vì amount
-              const dauBetAmount = item.totalAmount || 0;
-              stats.dauTotal += dauBetAmount;
+          case 'dau':
+            // Sử dụng totalAmount (số tiền khách trả) thay vì amount
+            const dauBetAmount = item.totalAmount || 0;
+            stats.dauTotal += dauBetAmount;
               // Cộng tổng tiền khách trả cho nhóm tổng/kép/đầu/đít/bộ
               stats.tongKepDauDitBoTotal += betAmount;
               if (item.numbers) {
@@ -257,12 +275,28 @@ const getStoreStatistics = async (req, res) => {
                   stats.dau[num] = (stats.dau[num] || 0) + amountPerNumber;
                 });
               }
-              break;
+            break;
 
-            case 'dit':
-              // Sử dụng totalAmount (số tiền khách trả) thay vì amount
-              const ditBetAmount = item.totalAmount || 0;
-              stats.ditTotal += ditBetAmount;
+          case 'dauA':
+            // Đề Đầu A giống đầu
+            {
+              const dauABetAmount = item.totalAmount || 0;
+              stats.dauATotal += dauABetAmount;
+              stats.tongKepDauDitBoTotal += betAmount;
+              if (item.numbers) {
+                const numbers = item.numbers.split(',').map(n => n.trim());
+                const amountPerNumber = item.amount || 0;
+                numbers.forEach(num => {
+                  stats.dauA[num] = (stats.dauA[num] || 0) + amountPerNumber;
+                });
+              }
+            }
+            break;
+
+          case 'dit':
+            // Sử dụng totalAmount (số tiền khách trả) thay vì amount
+            const ditBetAmount = item.totalAmount || 0;
+            stats.ditTotal += ditBetAmount;
               // Cộng tổng tiền khách trả cho nhóm tổng/kép/đầu/đít/bộ
               stats.tongKepDauDitBoTotal += betAmount;
               if (item.numbers) {
@@ -272,7 +306,23 @@ const getStoreStatistics = async (req, res) => {
                   stats.dit[num] = (stats.dit[num] || 0) + amountPerNumber;
                 });
               }
-              break;
+            break;
+
+          case 'ditA':
+            // Đề Đít A giống đít
+            {
+              const ditABetAmount = item.totalAmount || 0;
+              stats.ditATotal += ditABetAmount;
+              stats.tongKepDauDitBoTotal += betAmount;
+              if (item.numbers) {
+                const numbers = item.numbers.split(',').map(n => n.trim());
+                const amountPerNumber = item.amount || 0;
+                numbers.forEach(num => {
+                  stats.ditA[num] = (stats.ditA[num] || 0) + amountPerNumber;
+                });
+              }
+            }
+            break;
 
             case 'bo':
               // Sử dụng totalAmount (số tiền khách trả) thay vì amount

@@ -26,9 +26,10 @@ const aggregateStatsForWindow = async (adminId, startTime, endTime) => {
   const stats = {
     loto: {},
     '2s': {},
+    deaA: {},
     '3s': {},
     '4s': {},
-    grouped: { tong: {}, dau: {}, dit: {}, kep: {}, bo: {} },
+    grouped: { tong: {}, dau: {}, dit: {}, daua: {}, dita: {}, kep: {}, bo: {} },
     xien: {},
     xienquay: {}
   };
@@ -53,6 +54,12 @@ const aggregateStatsForWindow = async (adminId, startTime, endTime) => {
           const key = n.padStart(2, '0');
           stats['2s'][key] = (stats['2s'][key] || 0) + amount;
         });
+      } else if (betType === 'deaa') {
+        const nums = numbersStr.split(/[\,\s]+/).filter(Boolean);
+        nums.forEach(n => {
+          const key = n.padStart(2, '0');
+          stats.deaA[key] = (stats.deaA[key] || 0) + amount;
+        });
       } else if (betType === '3s') {
         const nums = numbersStr.split(/[,\s]+/).filter(Boolean);
         const per = nums.length > 0 ? Math.floor(totalAmount / nums.length) : 0;
@@ -67,7 +74,7 @@ const aggregateStatsForWindow = async (adminId, startTime, endTime) => {
           const key = n.trim().padStart(4, '0');
           stats['4s'][key] = (stats['4s'][key] || 0) + (amount || per);
         });
-      } else if (['tong', 'dau', 'dit', 'kep'].includes(betType)) {
+      } else if (['tong', 'dau', 'dit', 'daua', 'dita', 'kep'].includes(betType)) {
         const key = numbersStr.trim();
         if (!key) return;
         stats.grouped[betType][key] = (stats.grouped[betType][key] || 0) + amount;
@@ -110,11 +117,14 @@ const buildMessages = (stats, options = {}) => {
   const labels = Object.assign({
     lo: 'Lo',
     twoS: 'De',
+    deaA: 'De A',
     threeS: 'Bc',
     fourS: '4s',
     tong: 'De Tong',
     dau: 'De Dau',
     dit: 'De Dit',
+    dauA: 'De Dau A',
+    ditA: 'De Dit A',
     kep: 'Kep',
     boPrefix: 'Bo',
     xien2: 'Xien2',
@@ -200,6 +210,7 @@ const buildMessages = (stats, options = {}) => {
     }).join(', ')}`;
 
   const twoSMsg = groupLine(labels.twoS, stats['2s']);
+  const deAMsg = groupLine(labels.deaA, stats.deaA);
   const threeSMsg = groupLine(labels.threeS, stats['3s']);
   const fourSMsg = groupLine(labels.fourS, stats['4s']);
 
@@ -328,8 +339,11 @@ const buildMessages = (stats, options = {}) => {
   const xienNhayMsg = groupXiNhay(labels.xiennhay, stats.xien);
 
   // Kiểm tra xem có dữ liệu cược nào không
-  const hasAnyData = lotoMsg || twoSMsg || threeSMsg || fourSMsg || tongMsg ||
-    dauMsg || ditMsg || kepMsg || boMsg || x2Msg || x3Msg ||
+  const dauAMsg = groupLines(labels.dauA, stats.grouped.daua);
+  const ditAMsg = groupLines(labels.ditA, stats.grouped.dita);
+
+  const hasAnyData = lotoMsg || twoSMsg || deAMsg || threeSMsg || fourSMsg || tongMsg ||
+    dauMsg || ditMsg || dauAMsg || ditAMsg || kepMsg || boMsg || x2Msg || x3Msg ||
     x4Msg || xq3Msg || xq4Msg || xienNhayMsg;
 
   // Nếu không có dữ liệu gì, trả về message đặc biệt
@@ -337,11 +351,14 @@ const buildMessages = (stats, options = {}) => {
     return {
       loto: 'Không có cược trong thời gian này',
       twoS: '',
+      deaA: '',
       threeS: '',
       fourS: '',
       tong: '',
       dau: '',
       dit: '',
+      dauA: '',
+      ditA: '',
       kep: '',
       bo: '',
       xien2: '',
@@ -356,11 +373,14 @@ const buildMessages = (stats, options = {}) => {
   return {
     loto: lotoMsg,
     twoS: twoSMsg,
+    deaA: deAMsg,
     threeS: threeSMsg,
     fourS: fourSMsg,
     tong: tongMsg,
     dau: dauMsg,
     dit: ditMsg,
+    dauA: dauAMsg,
+    ditA: ditAMsg,
     kep: kepMsg,
     bo: boMsg,
     xien2: x2Msg,

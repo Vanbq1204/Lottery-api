@@ -450,7 +450,7 @@ const getStorePrizeStatistics = async (req, res) => {
                 detailString: `${numbersString}: ${betAmount}n x ${multiplier} = ${prizeAmount.toLocaleString('vi-VN')} đ`
               });
               
-            } else if (['tong', 'kep', 'dau', 'dit', 'bo'].includes(betType)) {
+          } else if (['tong', 'kep', 'dau', 'dit', 'bo', 'deaA', 'dauA', 'ditA'].includes(betType)) {
               // Others statistics (tong, kep, dau, dit, bo)
               statistics.others.totalPrize += prizeAmount;
               statistics.others.totalCases += 1;
@@ -591,7 +591,10 @@ const getCaseLabel = (caseType) => {
     'kep': 'Kép',
     'dau': 'Đầu',
     'dit': 'Đít',
-    'bo': 'Bộ'
+    'bo': 'Bộ',
+    'deaA': 'Đề A',
+    'dauA': 'Đầu A',
+    'ditA': 'Đít A'
   };
   
   return caseLabels[caseType] || caseType;

@@ -4,7 +4,7 @@ const invoiceItemSchema = new mongoose.Schema({
   betType: {
     type: String,
     required: true,
-    enum: ['loto', '2s', '3s', '4s', 'tong', 'kep', 'dau', 'dit', 'bo', 'xien', 'xienquay']
+    enum: ['loto', '2s', '3s', '4s', 'tong', 'kep', 'dau', 'dit', 'bo', 'xien', 'xienquay', 'deaA', 'dauA', 'ditA']
   },
   betTypeLabel: {
     type: String,

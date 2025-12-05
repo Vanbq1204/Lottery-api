@@ -10,7 +10,7 @@ const prizeMultiplierSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: [
-      'loto', '2s', '3s', '4s', 'tong', 'kep', 'dau', 'dit', 'bo', 'xien', 'xienquay',
+      'loto', '2s', 'deaA', '3s', '4s', 'tong', 'kep', 'dau', 'dit', 'bo', 'xien', 'xienquay',
       // 3s betTypes
       '3s_gdb', '3s_gdb_g1', '3s_gdb2_g1', '3s_g1', '3s_g6', '3s_2digits_gdb',
       // 4s betTypes

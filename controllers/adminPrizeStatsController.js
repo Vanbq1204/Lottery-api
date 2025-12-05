@@ -451,7 +451,7 @@ const getAdminPrizeStatistics = async (req, res) => {
               detailString: `${numbers}: ${betAmount}n x ${multiplier} = ${prizeAmount.toLocaleString('vi-VN')} đ`
             });
 
-          } else if (['tong', 'kep', 'dau', 'dit', 'bo'].includes(betType)) {
+          } else if (['tong', 'kep', 'dau', 'dit', 'bo', 'deaA', 'dauA', 'ditA'].includes(betType)) {
             // Others statistics (tong, kep, dau, dit, bo)
             statistics.others.totalPrize += prizeAmount;
             statistics.others.totalCases += 1;
@@ -572,6 +572,9 @@ const getCaseLabel = (caseType) => {
     'dau': 'Đầu',
     'dit': 'Đít',
     'bo': 'Bộ',
+    'deaA': 'Đề A',
+    'dauA': 'Đầu A',
+    'ditA': 'Đít A',
     
     // Fallback bet types
     'loto': 'Lô tô',

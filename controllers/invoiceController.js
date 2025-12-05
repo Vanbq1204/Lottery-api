@@ -339,6 +339,9 @@ const getInvoiceStats = async (req, res) => {
       kepTotal: 0,
       dauTotal: 0,
       ditTotal: 0,
+      deaATotal: 0,
+      dauATotal: 0,
+      ditATotal: 0,
       boTotal: 0,
       xienTotal: 0,
       xienquayTotal: 0,
@@ -350,6 +353,9 @@ const getInvoiceStats = async (req, res) => {
       kep: {}, // Will store kep types and their amounts
       dau: {}, // Will store dau numbers and their amounts
       dit: {}, // Will store dit numbers and their amounts
+      deaA: {}, // Đề A (2 số)
+      dauA: {}, // Đề Đầu A (1 số)
+      ditA: {}, // Đề Đít A (1 số)
       bo: {}, // Will store bo numbers and their amounts
       xien: {}, // Will store xien combinations and their amounts
       xienquay: {} // Will store xienquay combinations and their amounts
@@ -494,6 +500,52 @@ const getInvoiceStats = async (req, res) => {
                   stats.dit[cleanNum] = 0;
                 }
                 stats.dit[cleanNum] += betAmount;
+              });
+            }
+            break;
+          case 'deaA':
+            stats.deaATotal += amount;
+            // Đề A (2 số) giống 2s
+            if (item.numbers && item.amount) {
+              const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+              const betAmount = parseInt(item.amount) || 0;
+
+              numbers.forEach(num => {
+                const paddedNum = num.padStart(2, '0');
+                if (!stats.deaA[paddedNum]) {
+                  stats.deaA[paddedNum] = 0;
+                }
+                stats.deaA[paddedNum] += betAmount;
+              });
+            }
+            break;
+          case 'dauA':
+            stats.dauATotal += amount;
+            if (item.numbers && item.amount) {
+              const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+              const betAmount = parseInt(item.amount) || 0;
+
+              numbers.forEach(num => {
+                const cleanNum = num.toLowerCase().replace(/^đầu\s*/, '');
+                if (!stats.dauA[cleanNum]) {
+                  stats.dauA[cleanNum] = 0;
+                }
+                stats.dauA[cleanNum] += betAmount;
+              });
+            }
+            break;
+          case 'ditA':
+            stats.ditATotal += amount;
+            if (item.numbers && item.amount) {
+              const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+              const betAmount = parseInt(item.amount) || 0;
+
+              numbers.forEach(num => {
+                const cleanNum = num.toLowerCase().replace(/^đít\s*/, '');
+                if (!stats.ditA[cleanNum]) {
+                  stats.ditA[cleanNum] = 0;
+                }
+                stats.ditA[cleanNum] += betAmount;
               });
             }
             break;

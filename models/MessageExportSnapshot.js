@@ -3,11 +3,14 @@ const mongoose = require('mongoose');
 const messagesSchema = new mongoose.Schema({
   loto: { type: String, default: '' },
   twoS: { type: String, default: '' },
+  deaA: { type: String, default: '' },
   threeS: { type: String, default: '' },
   fourS: { type: String, default: '' },
   tong: { type: String, default: '' },
   dau: { type: String, default: '' },
+  dauA: { type: String, default: '' },
   dit: { type: String, default: '' },
+  ditA: { type: String, default: '' },
   kep: { type: String, default: '' },
   bo: { type: String, default: '' },
   // Legacy fields
