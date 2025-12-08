@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const messagesSchema = new mongoose.Schema({
   loto: { type: String, default: '' },
+  loA: { type: String, default: '' },
   twoS: { type: String, default: '' },
   deaA: { type: String, default: '' },
   threeS: { type: String, default: '' },

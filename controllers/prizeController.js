@@ -112,6 +112,65 @@ const countLotoOccurrences = (lotoNumbers, targetNumber) => {
   return lotoNumbers.filter(num => num === targetNumber.padStart(2, '0')).length;
 };
 
+// Hàm lấy tất cả 2 chữ số ĐẦU từ các giải (Lô A)
+const extractLoANumbers = (lotteryResult) => {
+  const numbers = [];
+  if (!lotteryResult || !lotteryResult.results) return numbers;
+  const results = lotteryResult.results;
+  const collectFirst2 = (val) => {
+    if (!val) return;
+    const s = String(val);
+    if (s.length >= 2) numbers.push(s.slice(0, 2));
+  };
+  collectFirst2(results.gdb);
+  collectFirst2(results.g1);
+  (results.g2 || []).forEach(collectFirst2);
+  ['g3','g4','g5','g6','g7'].forEach(prize => {
+    (results[prize] || []).forEach(collectFirst2);
+  });
+  return numbers;
+};
+
+// Hàm tính thưởng cho Lô A (dùng 2 số đầu các giải)
+const calculateLoAPrize = async (invoiceItem, lotteryResult, storeId) => {
+  const loANumbers = extractLoANumbers(lotteryResult);
+  console.log(`[PRIZE DEBUG] --> Các số Lô A trúng thưởng từ KQXS: [${loANumbers.join(', ')}]`);
+  const prizeMultiplier = await getMultiplierByStore(storeId, 'loto');
+  if (!prizeMultiplier) {
+    throw new Error('Không tìm thấy hệ số thưởng cho Lô A');
+  }
+  let totalWinningPoints = 0;
+  const winningDetails = [];
+  if (invoiceItem.numbers) {
+    const betNumbers = invoiceItem.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+    const betPoints = parseInt(invoiceItem.points) || 0;
+    betNumbers.forEach(number => {
+      const padded = number.padStart(2, '0');
+      const occurrences = loANumbers.filter(num => num === padded).length;
+      if (occurrences > 0) {
+        const winningPoints = betPoints * occurrences;
+        totalWinningPoints += winningPoints;
+        winningDetails.push({ number: padded, betPoints, occurrences, winningPoints });
+      }
+    });
+  }
+  if (totalWinningPoints > 0) {
+    const perNumberStrings = winningDetails.map(d => `${d.number}x${d.occurrences}(${d.betPoints * d.occurrences}đ)`);
+    const detailString = `Lô A: ${perNumberStrings.join(', ')} = ${totalWinningPoints}đ`;
+    return {
+      betType: 'loA',
+      betTypeLabel: 'Lô A',
+      numbers: perNumberStrings.join(', '),
+      betAmount: totalWinningPoints,
+      winningCount: winningDetails.reduce((sum, d) => sum + d.occurrences, 0),
+      multiplier: prizeMultiplier.multiplier,
+      prizeAmount: totalWinningPoints * prizeMultiplier.multiplier * 1000,
+      detailString
+    };
+  }
+  return null;
+};
+
 // Hàm tính thưởng cho lô
 const calculateLotoPrize = async (invoiceItem, lotteryResult, storeId) => {
   const lotoNumbers = extractLotoNumbers(lotteryResult);
@@ -1615,6 +1674,9 @@ const calculateInvoicePrize = async (invoice, lotteryDate, inputDate) => {
       switch (item.betType) {
         case 'loto':
           winningItem = await calculateLotoPrize(item, lotteryResult, invoice.storeId);
+          break;
+        case 'loA':
+          winningItem = await calculateLoAPrize(item, lotteryResult, invoice.storeId);
           break;
         case '2s':
           winningItem = await calculate2sPrize(item, lotteryResult, invoice.storeId);

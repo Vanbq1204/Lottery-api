@@ -187,6 +187,18 @@ const getStoreStatistics = async (req, res) => {
               }
               break;
 
+            case 'loA':
+              stats.loATotal = (stats.loATotal || 0) + betAmount;
+              stats.loA = stats.loA || {};
+              if (item.numbers) {
+                const numbers = item.numbers.split(',').map(n => n.trim());
+                const pointsPerNumber = item.points || 0;
+                numbers.forEach(num => {
+                  stats.loA[num] = (stats.loA[num] || 0) + pointsPerNumber;
+                });
+              }
+              break;
+
           case '2s':
             stats['2sTotal'] += betAmount;
             if (item.numbers) {
@@ -282,7 +294,6 @@ const getStoreStatistics = async (req, res) => {
             {
               const dauABetAmount = item.totalAmount || 0;
               stats.dauATotal += dauABetAmount;
-              stats.tongKepDauDitBoTotal += betAmount;
               if (item.numbers) {
                 const numbers = item.numbers.split(',').map(n => n.trim());
                 const amountPerNumber = item.amount || 0;
@@ -313,7 +324,6 @@ const getStoreStatistics = async (req, res) => {
             {
               const ditABetAmount = item.totalAmount || 0;
               stats.ditATotal += ditABetAmount;
-              stats.tongKepDauDitBoTotal += betAmount;
               if (item.numbers) {
                 const numbers = item.numbers.split(',').map(n => n.trim());
                 const amountPerNumber = item.amount || 0;

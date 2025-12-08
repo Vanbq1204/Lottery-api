@@ -33,6 +33,19 @@ const extractLotoNumbers = (lotteryResult) => {
   return lotoNumbers;
 };
 
+// Helper function to extract Lo A numbers (first two digits) from lottery result
+const extractLoANumbers = (lotteryResult) => {
+  const numbers = [];
+  if (lotteryResult && lotteryResult.results) {
+    const r = lotteryResult.results;
+    const collect = (val) => { if (!val) return; const s = String(val); if (s.length >= 2) numbers.push(s.slice(0, 2)); };
+    collect(r.gdb); collect(r.g1);
+    (r.g2 || []).forEach(collect);
+    ['g3','g4','g5','g6','g7'].forEach(k => (r[k] || []).forEach(collect));
+  }
+  return numbers;
+};
+
 // Helper function to count loto occurrences in KQXS
 const countLotoOccurrences = (lotoNumbers, targetNumber) => {
   return lotoNumbers.filter(num => num === targetNumber).length;
@@ -65,6 +78,7 @@ const getPrizeStatistics = async (req, res) => {
 
     // Get lottery result for the date to calculate correct hit counts
     let lotoNumbersFromKQXS = [];
+    let loANumbersFromKQXS = [];
     if (date && winningInvoices.length > 0) {
       // Convert date format from YYYY-MM-DD to DD/MM/YYYY for lottery result search
       const [year, month, day] = date.split('-');
@@ -78,12 +92,14 @@ const getPrizeStatistics = async (req, res) => {
       
       if (lotteryResult) {
         lotoNumbersFromKQXS = extractLotoNumbers(lotteryResult);
+        loANumbersFromKQXS = extractLoANumbers(lotteryResult);
         console.log('🎯 Loto numbers from KQXS:', lotoNumbersFromKQXS);
+        console.log('🎯 Lo A numbers from KQXS:', loANumbersFromKQXS);
       }
     }
 
     // Phân tích thống kê
-    const stats = analyzeWinningData(winningInvoices, lotoNumbersFromKQXS);
+    const stats = analyzeWinningData(winningInvoices, lotoNumbersFromKQXS, loANumbersFromKQXS);
     
     res.json({
       success: true,
@@ -103,12 +119,18 @@ const getPrizeStatistics = async (req, res) => {
 };
 
 // Hàm phân tích dữ liệu winning
-const analyzeWinningData = (winningInvoices, lotoNumbersFromKQXS = []) => {
+const analyzeWinningData = (winningInvoices, lotoNumbersFromKQXS = [], loANumbersFromKQXS = []) => {
   const stats = {
     loto: {
       totalPrize: 0,
       totalWinningNumbers: 0,
       winningNumbers: {}, // {number: {count, totalPrize}}
+      details: []
+    },
+    loA: {
+      totalPrize: 0,
+      totalWinningNumbers: 0,
+      winningNumbers: {},
       details: []
     },
     '2s': {
@@ -158,6 +180,8 @@ const analyzeWinningData = (winningInvoices, lotoNumbersFromKQXS = []) => {
       // Phân loại và thống kê
       if (betType === 'loto') {
         analyzeLotoItem(item, stats.loto, lotoNumbersFromKQXS);
+      } else if (betType === 'loA') {
+        analyzeLoAItem(item, stats.loA, loANumbersFromKQXS);
       } else if (betType === '2s') {
         analyze2sItem(item, stats['2s']);
       } else if (betType.startsWith('3s_')) {
@@ -174,8 +198,9 @@ const analyzeWinningData = (winningInvoices, lotoNumbersFromKQXS = []) => {
     });
   });
 
-  // Cập nhật tổng số con trúng cho lô tô cuối cùng
+  // Cập nhật tổng số con trúng
   stats.loto.totalWinningNumbers = Object.keys(stats.loto.winningNumbers).length;
+  stats.loA.totalWinningNumbers = Object.keys(stats.loA.winningNumbers).length;
 
   // Tính lại tổng thưởng 2 số sau khi đã phân tích tất cả items
   stats['2s'].totalPrize = Object.values(stats['2s'].winningNumbers).reduce((sum, data) => {
@@ -224,6 +249,40 @@ const analyzeLotoItem = (item, lotoStats, lotoNumbersFromKQXS = []) => {
   // Không cập nhật ở đây nữa - sẽ cập nhật cuối cùng
   
   lotoStats.details.push({
+    numbers: item.numbers,
+    betAmount: item.betAmount,
+    multiplier: item.multiplier,
+    prizeAmount: item.prizeAmount,
+    detailString: item.detailString
+  });
+};
+
+// Phân tích Lô A (2 số đầu)
+const analyzeLoAItem = (item, loAStats, loANumbersFromKQXS = []) => {
+  loAStats.totalPrize += item.prizeAmount;
+  const numberMatches = item.numbers.match(/(\d+)x(\d+)\((\d+)đ\)/g);
+  if (numberMatches) {
+    numberMatches.forEach(match => {
+      const [, number, count, points] = match.match(/(\d+)x(\d+)\((\d+)đ\)/);
+      const totalPoints = parseInt(points);
+      const paddedNumber = number.padStart(2, '0');
+      if (!loAStats.winningNumbers[paddedNumber]) {
+        const kqxsHits = loANumbersFromKQXS.length > 0
+          ? countLotoOccurrences(loANumbersFromKQXS, paddedNumber)
+          : 0;
+        const invoiceHits = parseInt(count);
+        const actualHitCount = Math.max(invoiceHits, kqxsHits);
+        loAStats.winningNumbers[paddedNumber] = {
+          hitCount: actualHitCount,
+          totalPoints: 0,
+          totalPrize: 0
+        };
+      }
+      loAStats.winningNumbers[paddedNumber].totalPoints += totalPoints;
+      loAStats.winningNumbers[paddedNumber].totalPrize += (totalPoints * item.multiplier * 1000);
+    });
+  }
+  loAStats.details.push({
     numbers: item.numbers,
     betAmount: item.betAmount,
     multiplier: item.multiplier,

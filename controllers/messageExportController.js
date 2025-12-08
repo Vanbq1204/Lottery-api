@@ -25,6 +25,7 @@ const aggregateStatsForWindow = async (adminId, startTime, endTime) => {
 
   const stats = {
     loto: {},
+    loA: {},
     '2s': {},
     deaA: {},
     '3s': {},
@@ -47,6 +48,12 @@ const aggregateStatsForWindow = async (adminId, startTime, endTime) => {
         nums.forEach(n => {
           const key = n.padStart(2, '0');
           stats.loto[key] = (stats.loto[key] || 0) + points;
+        });
+      } else if (betType === 'loa') {
+        const nums = numbersStr.split(/[,\s]+/).filter(Boolean);
+        nums.forEach(n => {
+          const key = n.padStart(2, '0');
+          stats.loA[key] = (stats.loA[key] || 0) + points;
         });
       } else if (betType === '2s') {
         const nums = numbersStr.split(/[,\s]+/).filter(Boolean);
@@ -116,6 +123,7 @@ const buildMessages = (stats, options = {}) => {
 
   const labels = Object.assign({
     lo: 'Lo',
+    loA: 'Lo A',
     twoS: 'De',
     deaA: 'De A',
     threeS: 'Bc',
@@ -206,6 +214,19 @@ const buildMessages = (stats, options = {}) => {
     ? ''
     : `${labels.lo}: ${Array.from(lotoGroups.keys()).sort((a, b) => b - a).map(p => {
       const nums = lotoGroups.get(p).sort((x, y) => parseInt(x) - parseInt(y));
+      return `${nums.join(',')}x${p}đ`;
+    }).join(', ')}`;
+
+  const loAGroups = new Map();
+  Object.entries(stats.loA || {}).forEach(([num, pt]) => {
+    const p = parseInt(pt) || 0; if (p <= 0) return;
+    if (!loAGroups.has(p)) loAGroups.set(p, []);
+    loAGroups.get(p).push(num);
+  });
+  const loAMsg = loAGroups.size === 0
+    ? ''
+    : `${labels.loA}: ${Array.from(loAGroups.keys()).sort((a, b) => b - a).map(p => {
+      const nums = loAGroups.get(p).sort((x, y) => parseInt(x) - parseInt(y));
       return `${nums.join(',')}x${p}đ`;
     }).join(', ')}`;
 
@@ -342,7 +363,7 @@ const buildMessages = (stats, options = {}) => {
   const dauAMsg = groupLines(labels.dauA, stats.grouped.daua);
   const ditAMsg = groupLines(labels.ditA, stats.grouped.dita);
 
-  const hasAnyData = lotoMsg || twoSMsg || deAMsg || threeSMsg || fourSMsg || tongMsg ||
+  const hasAnyData = lotoMsg || loAMsg || twoSMsg || deAMsg || threeSMsg || fourSMsg || tongMsg ||
     dauMsg || ditMsg || dauAMsg || ditAMsg || kepMsg || boMsg || x2Msg || x3Msg ||
     x4Msg || xq3Msg || xq4Msg || xienNhayMsg;
 
@@ -351,6 +372,7 @@ const buildMessages = (stats, options = {}) => {
     return {
       loto: 'Không có cược trong thời gian này',
       twoS: '',
+      loA: '',
       deaA: '',
       threeS: '',
       fourS: '',
@@ -373,6 +395,7 @@ const buildMessages = (stats, options = {}) => {
   return {
     loto: lotoMsg,
     twoS: twoSMsg,
+    loA: loAMsg,
     deaA: deAMsg,
     threeS: threeSMsg,
     fourS: fourSMsg,

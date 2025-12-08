@@ -333,6 +333,7 @@ const getInvoiceStats = async (req, res) => {
       totalRevenue: 0,
       lotoTotal: 0,
       '2sTotal': 0,
+      loATotal: 0,
       '3sTotal': 0,
       '4sTotal': 0,
       tongTotal: 0,
@@ -347,6 +348,7 @@ const getInvoiceStats = async (req, res) => {
       xienquayTotal: 0,
       loto: {}, // Will store loto numbers and their points
       '2s': {}, // Will store 2s numbers and their amounts
+      loA: {}, // Will store Lo A numbers and their points
       '3s': {}, // Will store 3s numbers and their amounts
       '4s': {}, // Will store 4s numbers and their amounts
       tong: {}, // Will store tong numbers and their amounts
@@ -370,24 +372,41 @@ const getInvoiceStats = async (req, res) => {
         const betType = item.betType;
         const amount = item.totalAmount || 0;
 
-        // Add to bet type totals
-        switch (betType) {
-          case 'loto':
-            stats.lotoTotal += amount;
-            // Process loto numbers and points
-            if (item.numbers && item.points) {
-              const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
-              const points = parseInt(item.points) || 0;
+      // Add to bet type totals
+      switch (betType) {
+        case 'loto':
+          stats.lotoTotal += amount;
+          // Process loto numbers and points
+          if (item.numbers && item.points) {
+            const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+            const points = parseInt(item.points) || 0;
 
               numbers.forEach(num => {
                 const paddedNum = num.padStart(2, '0');
                 if (!stats.loto[paddedNum]) {
                   stats.loto[paddedNum] = 0;
                 }
-                stats.loto[paddedNum] += points;
-              });
-            }
-            break;
+            stats.loto[paddedNum] += points;
+          });
+        }
+          break;
+        case 'loA':
+          stats.loATotal = (stats.loATotal || 0) + amount;
+          // Process Lô A numbers and points (same as loto)
+          if (item.numbers && item.points) {
+            const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+            const points = parseInt(item.points) || 0;
+
+            numbers.forEach(num => {
+              const paddedNum = num.padStart(2, '0');
+              stats.loA = stats.loA || {};
+              if (!stats.loA[paddedNum]) {
+                stats.loA[paddedNum] = 0;
+              }
+              stats.loA[paddedNum] += points;
+            });
+          }
+          break;
           case '2s':
             stats['2sTotal'] += amount;
             // Process 2s numbers and amounts
@@ -690,10 +709,34 @@ const editInvoice = async (req, res) => {
       changeAmount: existingInvoice.changeAmount
     };
 
+    // Chuẩn hóa items trước khi lưu: tính lại totalAmount cho Lô/Lô A theo hệ số cửa hàng
+    let normalizedItems = items || existingInvoice.items;
+    try {
+      const { getLotoMultiplierByStoreId } = require('./lotoMultiplierController');
+      const lotoMultiplier = await getLotoMultiplierByStoreId(existingInvoice.storeId);
+      if (Array.isArray(normalizedItems)) {
+        normalizedItems = normalizedItems.map(it => {
+          if (it && (it.betType === 'loto' || it.betType === 'loA')) {
+            const points = parseFloat(it.points) || 0;
+            const nums = (it.numbers || '').split(/[\s,]+/).filter(n => n.length > 0);
+            const count = nums.length;
+            const computed = Math.round(points * count * (parseFloat(lotoMultiplier) || 0));
+            return { ...it, totalAmount: computed };
+          }
+          return it;
+        });
+      }
+    } catch (_) { /* giữ nguyên nếu lỗi */ }
+
+    // Tính lại tổng tiền hóa đơn nếu không truyền vào
+    const recomputedTotal = Array.isArray(normalizedItems)
+      ? normalizedItems.reduce((sum, it) => sum + (parseFloat(it?.totalAmount) || 0), 0)
+      : (totalAmount || existingInvoice.totalAmount);
+
     // Cập nhật hóa đơn
     existingInvoice.customerName = customerName || existingInvoice.customerName;
-    existingInvoice.items = items || existingInvoice.items;
-    existingInvoice.totalAmount = totalAmount || existingInvoice.totalAmount;
+    existingInvoice.items = normalizedItems;
+    existingInvoice.totalAmount = (typeof totalAmount === 'number') ? totalAmount : recomputedTotal;
     existingInvoice.customerPaid = customerPaid || existingInvoice.customerPaid;
     existingInvoice.changeAmount = changeAmount || existingInvoice.changeAmount;
 

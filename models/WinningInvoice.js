@@ -6,7 +6,7 @@ const winningItemSchema = new mongoose.Schema({
     required: true,
     enum: [
       'loto', '2s', '3s', '4s', 'tong', 'kep', 'dau', 'dit', 'bo', 'xien', 'xienquay',
-      'deaA', 'dauA', 'ditA',
+      'deaA', 'dauA', 'ditA', 'loA',
       // Xiên quay
       'xienquay2', 'xienquay3', 'xienquay4', 'xienquay3_full', 'xienquay3_2con', 'xienquay4_full', 'xienquay4_3con', 'xienquay4_2con',
       // Xiên

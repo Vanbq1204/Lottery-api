@@ -125,6 +125,7 @@ const getAdminTotalStatistics = async (req, res) => {
       lotoTotal: 0,
       '2sTotal': 0,
       deaATotal: 0,
+      loATotal: 0,
       '3sTotal': 0,
       '4sTotal': 0,
       tongTotal: 0, // Tổng tiền cược thực tế cho tổng
@@ -142,6 +143,7 @@ const getAdminTotalStatistics = async (req, res) => {
       deaA: {},
       '3s': {},
       '4s': {},
+      loA: {},
       xien: {},
       xienquay: {},
       grouped: {
@@ -177,19 +179,33 @@ const getAdminTotalStatistics = async (req, res) => {
             }
             
             // Loto statistics - accumulate points for each number (giữ nguyên cho bảng)
-            if (item.numbers && item.points) {
-              const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
-              const points = parseInt(item.points) || 0;
-              
-              numbers.forEach(num => {
-                const paddedNum = num.padStart(2, '0');
-                if (!stats.loto[paddedNum]) {
-                  stats.loto[paddedNum] = 0;
-                }
-                stats.loto[paddedNum] += points; // points in đ
-              });
+        if (item.numbers && item.points) {
+          const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+          const points = parseInt(item.points) || 0;
+          
+          numbers.forEach(num => {
+            const paddedNum = num.padStart(2, '0');
+            if (!stats.loto[paddedNum]) {
+              stats.loto[paddedNum] = 0;
             }
+            stats.loto[paddedNum] += points; // points in đ
+          });
+        }
+        }
+        else if (betType === 'loa') {
+          stats.loATotal += betAmount;
+          if (item.numbers && item.points) {
+            const numbers = item.numbers.split(/[\s,]+/).filter(n => n.length > 0);
+            const points = parseInt(item.points) || 0;
+            numbers.forEach(num => {
+              const paddedNum = num.padStart(2, '0');
+              if (!stats.loA[paddedNum]) {
+                stats.loA[paddedNum] = 0;
+              }
+              stats.loA[paddedNum] += points;
+            });
           }
+        }
           else if (betType === '2s') {
             stats['2sTotal'] += betAmount;
             // 2S statistics - use individual bet amount per number, not total
@@ -361,8 +377,10 @@ const getAdminTotalStatistics = async (req, res) => {
               case 'bo': stats.boTotal += customerPaymentAmount; break;
             }
             
-            // Cộng tổng tiền khách trả cho nhóm tổng/kép/đầu/đít/bộ
-            stats.tongKepDauDitBoTotal += customerPaymentAmount;
+            // Cộng tổng tiền khách trả cho nhóm tổng/kép/đầu/đít/bộ (KHÔNG bao gồm Đầu A/Đít A)
+            if (['tong', 'kep', 'dau', 'dit', 'bo'].includes(betType)) {
+              stats.tongKepDauDitBoTotal += customerPaymentAmount;
+            }
             
             // Grouped statistics (tong, kep, dau, dit, bo) - sử dụng số tiền cược thực tế
             if (betType === 'bo') {

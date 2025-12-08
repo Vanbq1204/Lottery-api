@@ -37,6 +37,18 @@ const extractLotoNumbers = (lotteryResult) => {
   return lotoNumbers;
 };
 
+// Helper function to extract Lo A numbers (first two digits)
+const extractLoANumbers = (lotteryResult) => {
+  const nums = [];
+  if (!lotteryResult || !lotteryResult.results) return nums;
+  const r = lotteryResult.results;
+  const collect = (val) => { if (!val) return; const s = String(val); if (s.length >= 2) nums.push(s.slice(0,2)); };
+  collect(r.gdb); collect(r.g1);
+  (r.g2 || []).forEach(collect);
+  ['g3','g4','g5','g6','g7'].forEach(k => (r[k] || []).forEach(collect));
+  return nums;
+};
+
 // Helper function to count loto occurrences in KQXS
 const countLotoOccurrences = (lotoNumbers, targetNumber) => {
   return lotoNumbers.filter(num => num === targetNumber).length;
@@ -140,6 +152,12 @@ const getStorePrizeStatistics = async (req, res) => {
         totalWinningNumbers: 0,
         winningNumbers: {}
       },
+      loA: {
+        totalPrize: 0,
+        totalPoints: 0,
+        totalWinningNumbers: 0,
+        winningNumbers: {}
+      },
       '2s': {
         totalPrize: 0,
         winningNumbers: {}
@@ -175,6 +193,7 @@ const getStorePrizeStatistics = async (req, res) => {
 
     // Get lottery results for the date to calculate accurate loto hit counts
     let lotoNumbersFromKQXS = [];
+    let loANumbersFromKQXS = [];
     if (date && winningInvoices.length > 0) {
       // Convert date format from YYYY-MM-DD to DD/MM/YYYY for lottery result search
       const [year, month, day] = date.split('-');
@@ -195,6 +214,7 @@ const getStorePrizeStatistics = async (req, res) => {
         if (lotteryResultsQuery.length > 0) {
           // Use the first lottery result to extract loto numbers (global KQXS)
           lotoNumbersFromKQXS = extractLotoNumbers(lotteryResultsQuery[0]);
+          loANumbersFromKQXS = extractLoANumbers(lotteryResult);
           console.log('🎲 Extracted loto numbers from KQXS:', lotoNumbersFromKQXS.length, 'numbers');
         } else {
           console.log('⚠️ No lottery result found for turnNum:', turnNum);
@@ -257,6 +277,31 @@ const getStorePrizeStatistics = async (req, res) => {
             }
             
             statistics.loto.totalWinningNumbers = Object.keys(statistics.loto.winningNumbers).length;
+            break;
+          case 'loA':
+            statistics.loA.totalPrize += prizeAmount;
+            const loAMatches = numbersString.match(/(\d+)x(\d+)\((\d+)đ\)/g);
+            if (loAMatches) {
+              loAMatches.forEach(match => {
+                const [, number, hitCountFromInvoice, points] = match.match(/(\d+)x(\d+)\((\d+)đ\)/);
+                const num = number.padStart(2, '0');
+                const totalPoints = parseInt(points);
+                const kqxsHits = loANumbersFromKQXS.length > 0
+                  ? loANumbersFromKQXS.filter(n => n === num).length
+                  : 0;
+                const invoiceHits = parseInt(hitCountFromInvoice);
+                const actualHitCount = Math.max(invoiceHits, kqxsHits);
+                if (!statistics.loA.winningNumbers[num]) {
+                  statistics.loA.winningNumbers[num] = { count: 0, hitCount: actualHitCount, totalPoints: 0, totalPrize: 0 };
+                } else {
+                  statistics.loA.winningNumbers[num].hitCount = actualHitCount;
+                }
+                statistics.loA.winningNumbers[num].count += 1;
+                statistics.loA.winningNumbers[num].totalPoints += totalPoints;
+                statistics.loA.winningNumbers[num].totalPrize += (totalPoints * multiplier * 1000);
+              });
+            }
+            statistics.loA.totalWinningNumbers = Object.keys(statistics.loA.winningNumbers).length;
             break;
 
           case '2s':
