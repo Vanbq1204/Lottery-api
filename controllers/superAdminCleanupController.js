@@ -4,6 +4,7 @@ const Store = require('../models/Store');
 const User = require('../models/User');
 const mongoose = require('mongoose');
 const MessageExportSnapshot = require('../models/MessageExportSnapshot');
+const DailyReport = require('../models/DailyReport');
 const { getVietnamDayRange } = require('../utils/dateUtils');
 
 // Helper: get Vietnam current date (YYYY-MM-DD)
@@ -72,6 +73,7 @@ const getSuperAdminCleanupStats = async (req, res) => {
         adminId: admin._id,
         adminName: admin.name || admin.username,
         totalSnapshots,
+        totalDailyReports: 0,
         stores: []
       };
 
@@ -89,11 +91,14 @@ const getSuperAdminCleanupStats = async (req, res) => {
           createdAt: { $gte: startOfDay, $lte: endOfDay }
         });
 
+        const hasDailyReport = await DailyReport.countDocuments({ storeId: store._id, date });
+        adminData.totalDailyReports += hasDailyReport > 0 ? 1 : 0;
         adminData.stores.push({
           storeId: store._id,
           storeName: store.name,
           totalWinningInvoices,
-          paidWinningInvoices
+          paidWinningInvoices,
+          hasDailyReport: hasDailyReport > 0
         });
       }
 
@@ -147,12 +152,18 @@ const performSuperAdminCleanup = async (req, res) => {
       date
     });
 
+    const deletedDailyReportsResult = await DailyReport.deleteMany({
+      storeId: { $in: storeIds },
+      date
+    });
+
     return res.json({
       success: true,
       message: 'Xóa dữ liệu thành công',
       deletedInvoices: deletedInvoicesResult.deletedCount,
       deletedWinningInvoices: deletedWinningInvoicesResult.deletedCount,
-      deletedSnapshots: deletedSnapshotsResult.deletedCount
+      deletedSnapshots: deletedSnapshotsResult.deletedCount,
+      deletedDailyReports: deletedDailyReportsResult.deletedCount
     });
   } catch (error) {
     console.error('SuperAdmin perform cleanup error:', error);

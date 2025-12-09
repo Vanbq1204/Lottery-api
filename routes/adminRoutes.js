@@ -9,6 +9,7 @@ const { getCleanupStats, performCleanup } = require('../controllers/dataCleanupC
 const { exportMessages, getExportHistory, reexportSnapshot } = require('../controllers/messageExportController');
 const { listRequests: listInvoiceChangeRequests, decideRequest: decideInvoiceChangeRequest } = require('../controllers/invoiceChangeRequestController');
 const { authenticateToken, changePassword } = require('../controllers/authController');
+const { getAdminDailyReports } = require('../controllers/adminDailyReportController');
 
 // Middleware kiểm tra quyền admin
 const requireAdmin = (req, res, next) => {
@@ -62,5 +63,8 @@ router.put('/change-password', authenticateToken, requireAdmin, changePassword);
 // Danh sách yêu cầu chỉnh sửa/xóa hóa đơn và phê duyệt
 router.get('/invoice-change-requests', authenticateToken, requireAdmin, listInvoiceChangeRequests);
 router.put('/invoice-change-requests/:requestId', authenticateToken, requireAdmin, decideInvoiceChangeRequest);
+
+// Báo cáo cuối ngày theo cửa hàng cho admin
+router.get('/daily-reports', authenticateToken, requireAdmin, getAdminDailyReports);
 
 module.exports = router;

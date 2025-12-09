@@ -79,6 +79,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
 const notificationRoutes = require('./routes/notifications');
+const dailyReportRoutes = require('./routes/dailyReportRoutes');
 
 
 app.use('/api/auth', authRoutes);
@@ -91,6 +92,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/employee', employeeRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/daily-report', dailyReportRoutes);
 
 
 // Health check endpoint
