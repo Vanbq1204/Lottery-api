@@ -119,7 +119,8 @@ const aggregateStatsForWindow = async (adminId, startTime, endTime) => {
 // Build message strings from stats
 const buildMessages = (stats, options = {}) => {
   const multiplierInput = typeof options.multiplier === 'number' ? options.multiplier : 1;
-  const multiplier = Math.max(1, multiplierInput); // tối thiểu 1
+  const multiplier = multiplierInput > 0 ? multiplierInput : 1;
+  const applyScope = options.applyScope || { mode: 'exceptLo', types: [] };
 
   const labels = Object.assign({
     lo: 'Lo',
@@ -143,12 +144,19 @@ const buildMessages = (stats, options = {}) => {
     xiennhay: 'Xiennhay'
   }, options.labels || {});
 
-  const groupLine = (label, map) => {
+  const shouldApply = (type) => {
+    if (!type) return applyScope.mode !== 'exceptLo';
+    if (applyScope.mode === 'all') return true;
+    if (applyScope.mode === 'exceptLo') return type !== 'loto';
+    if (applyScope.mode === 'custom') return Array.isArray(applyScope.types) && applyScope.types.includes(type);
+    return false;
+  };
+
+  const groupLine = (label, map, typeKey) => {
     const byAmount = new Map();
     Object.entries(map || {}).forEach(([k, v]) => {
       let a = parseInt(v) || 0; if (a <= 0) return;
-      // áp dụng hệ số gửi đi cho tất cả nhóm ngoại trừ lô
-      a = Math.round(a * multiplier);
+      a = shouldApply(typeKey) ? Math.round(a * multiplier) : a;
       if (!byAmount.has(a)) byAmount.set(a, []);
       byAmount.get(a).push(k);
     });
@@ -161,11 +169,11 @@ const buildMessages = (stats, options = {}) => {
     return `${label}: ${parts.join(', ')}`;
   };
 
-  const groupLines = (label, map) => {
+  const groupLines = (label, map, typeKey) => {
     const byAmount = new Map();
     Object.entries(map || {}).forEach(([k, v]) => {
       let a = parseInt(v) || 0; if (a <= 0) return;
-      a = Math.round(a * multiplier);
+      a = shouldApply(typeKey) ? Math.round(a * multiplier) : a;
       if (!byAmount.has(a)) byAmount.set(a, []);
       byAmount.get(a).push(k);
     });
@@ -188,11 +196,11 @@ const buildMessages = (stats, options = {}) => {
       .replace(/Đ/g, 'D');
   };
 
-  const groupLinesNoAccent = (label, map) => {
+  const groupLinesNoAccent = (label, map, typeKey) => {
     const byAmount = new Map();
     Object.entries(map || {}).forEach(([k, v]) => {
       let a = parseInt(v) || 0; if (a <= 0) return;
-      a = Math.round(a * multiplier);
+      a = shouldApply(typeKey) ? Math.round(a * multiplier) : a;
       if (!byAmount.has(a)) byAmount.set(a, []);
       byAmount.get(a).push(removeAccents(k));
     });
@@ -206,7 +214,8 @@ const buildMessages = (stats, options = {}) => {
   // Lô
   const lotoGroups = new Map();
   Object.entries(stats.loto || {}).forEach(([num, pt]) => {
-    const p = parseInt(pt) || 0; if (p <= 0) return;
+    const p0 = parseInt(pt) || 0; if (p0 <= 0) return;
+    const p = shouldApply('loto') ? Math.max(1, Math.round(p0 * multiplier)) : p0;
     if (!lotoGroups.has(p)) lotoGroups.set(p, []);
     lotoGroups.get(p).push(num);
   });
@@ -219,7 +228,8 @@ const buildMessages = (stats, options = {}) => {
 
   const loAGroups = new Map();
   Object.entries(stats.loA || {}).forEach(([num, pt]) => {
-    const p = parseInt(pt) || 0; if (p <= 0) return;
+    const p0 = parseInt(pt) || 0; if (p0 <= 0) return;
+    const p = shouldApply('loA') ? Math.max(1, Math.round(p0 * multiplier)) : p0;
     if (!loAGroups.has(p)) loAGroups.set(p, []);
     loAGroups.get(p).push(num);
   });
@@ -230,20 +240,20 @@ const buildMessages = (stats, options = {}) => {
       return `${nums.join(',')}x${p}đ`;
     }).join(', ')}`;
 
-  const twoSMsg = groupLine(labels.twoS, stats['2s']);
-  const deAMsg = groupLine(labels.deaA, stats.deaA);
-  const threeSMsg = groupLine(labels.threeS, stats['3s']);
-  const fourSMsg = groupLine(labels.fourS, stats['4s']);
+  const twoSMsg = groupLine(labels.twoS, stats['2s'], 'twoS');
+  const deAMsg = groupLine(labels.deaA, stats.deaA, 'deaA');
+  const threeSMsg = groupLine(labels.threeS, stats['3s'], 'threeS');
+  const fourSMsg = groupLine(labels.fourS, stats['4s'], 'fourS');
 
-  const tongMsg = groupLines(labels.tong, stats.grouped.tong);
-  const dauMsg = groupLines(labels.dau, stats.grouped.dau);
-  const ditMsg = groupLines(labels.dit, stats.grouped.dit);
+  const tongMsg = groupLines(labels.tong, stats.grouped.tong, 'tong');
+  const dauMsg = groupLines(labels.dau, stats.grouped.dau, 'dau');
+  const ditMsg = groupLines(labels.dit, stats.grouped.dit, 'dit');
   const kepMsg = (() => {
     const map = stats.grouped.kep || {};
     const totals = new Map();
     Object.entries(map).forEach(([k, v]) => {
       let a = parseInt(v) || 0; if (a <= 0) return;
-      a = Math.round(a * multiplier);
+      a = shouldApply('kep') ? Math.round(a * multiplier) : a;
       const item = removeAccents(String(k)).toLowerCase().trim();
       totals.set(item, (totals.get(item) || 0) + a);
     });
@@ -283,7 +293,8 @@ const buildMessages = (stats, options = {}) => {
   };
   Object.entries(boMap).forEach(([key, val]) => {
     const alias = getBoAlias(key);
-    const amount = Math.round((parseInt(val) || 0) * multiplier);
+    const baseAmount = parseInt(val) || 0;
+    const amount = shouldApply('bo') ? Math.round(baseAmount * multiplier) : baseAmount;
     if (!amount) return;
     const isNumericTwo = /^\d{2}$/.test(String(key));
     if (alias) {
@@ -314,7 +325,7 @@ const buildMessages = (stats, options = {}) => {
   const boMsg = [deBoMsg, ...specialBoLines.sort()].filter(s => s && s.length > 0).join('\n');
 
   // Xiên: tách theo độ dài (2/3/4)
-  const groupXiByLen = (label, map, len) => {
+  const groupXiByLen = (label, map, len, typeKey) => {
     const filtered = {};
     Object.entries(map || {}).forEach(([combo, amt]) => {
       const isNhay = combo.includes('xiên nháy');
@@ -325,27 +336,26 @@ const buildMessages = (stats, options = {}) => {
         filtered[combo] = amt;
       }
     });
-    return groupLine(label, filtered);
+    return groupLine(label, filtered, typeKey);
   };
 
   const groupXiNhay = (label, map) => {
     const filtered = {};
     Object.entries(map || {}).forEach(([combo, amt]) => {
       if (combo.includes('xiên nháy')) {
-        // bỏ nhãn để hiển thị gọn
         const core = combo.split(' ')[0];
         filtered[core] = amt;
       }
     });
     if (Object.keys(filtered).length === 0) return '';
-    return groupLine(label, filtered);
+    return groupLine(label, filtered, 'xiennhay');
   };
-  const x2Msg = groupXiByLen(labels.xien2, stats.xien, 2);
-  const x3Msg = groupXiByLen(labels.xien3, stats.xien, 3);
-  const x4Msg = groupXiByLen(labels.xien4, stats.xien, 4);
+  const x2Msg = groupXiByLen(labels.xien2, stats.xien, 2, 'xien2');
+  const x3Msg = groupXiByLen(labels.xien3, stats.xien, 3, 'xien3');
+  const x4Msg = groupXiByLen(labels.xien4, stats.xien, 4, 'xien4');
 
   // Xiên quay: tách 3/4
-  const groupXqByLen = (label, map, len) => {
+  const groupXqByLen = (label, map, len, typeKey) => {
     const filtered = {};
     Object.entries(map || {}).forEach(([combo, amt]) => {
       const parts = combo.split('-').filter(Boolean);
@@ -353,15 +363,15 @@ const buildMessages = (stats, options = {}) => {
         filtered[combo] = amt;
       }
     });
-    return groupLine(label, filtered);
+    return groupLine(label, filtered, typeKey);
   };
-  const xq3Msg = groupXqByLen(labels.xq3, stats.xienquay, 3);
-  const xq4Msg = groupXqByLen(labels.xq4, stats.xienquay, 4);
+  const xq3Msg = groupXqByLen(labels.xq3, stats.xienquay, 3, 'xq3');
+  const xq4Msg = groupXqByLen(labels.xq4, stats.xienquay, 4, 'xq4');
   const xienNhayMsg = groupXiNhay(labels.xiennhay, stats.xien);
 
   // Kiểm tra xem có dữ liệu cược nào không
-  const dauAMsg = groupLines(labels.dauA, stats.grouped.daua);
-  const ditAMsg = groupLines(labels.ditA, stats.grouped.dita);
+  const dauAMsg = groupLines(labels.dauA, stats.grouped.daua, 'dauA');
+  const ditAMsg = groupLines(labels.ditA, stats.grouped.dita, 'ditA');
 
   const hasAnyData = lotoMsg || loAMsg || twoSMsg || deAMsg || threeSMsg || fourSMsg || tongMsg ||
     dauMsg || ditMsg || dauAMsg || ditAMsg || kepMsg || boMsg || x2Msg || x3Msg ||
@@ -419,7 +429,7 @@ const buildMessages = (stats, options = {}) => {
 const exportMessages = async (req, res) => {
   try {
     const adminId = req.user.id;
-    const { date, time, multiplier, format } = req.body; // date: YYYY-MM-DD, time: HH:MM optional, multiplier optional, format optional
+    const { date, time, multiplier, format, applyScope } = req.body;
     const { startOfDay } = getVietnamDayRange(date);
     const endTime = parseVietnamEndTime(date, time);
 
@@ -429,7 +439,8 @@ const exportMessages = async (req, res) => {
 
     // Tính stats và dựng message
     const stats = await aggregateStatsForWindow(adminId, startTime, endTime);
-    const messages = buildMessages(stats, { multiplier: typeof multiplier === 'number' ? multiplier : 1.0, labels: format });
+    const usedMultiplier = typeof multiplier === 'number' ? multiplier : 1.0;
+    const messages = buildMessages(stats, { multiplier: usedMultiplier, labels: format, applyScope });
 
     // Tạo snapshot mới
     const seq = (last?.sequence || 0) + 1;
@@ -439,7 +450,9 @@ const exportMessages = async (req, res) => {
       sequence: seq,
       startTime,
       endTime,
-      messages
+      messages,
+      multiplier: usedMultiplier,
+      applyScope
     });
     await snapshot.save();
 
@@ -473,7 +486,7 @@ const reexportSnapshot = async (req, res) => {
   try {
     const adminId = req.user.id;
     const { snapshotId } = req.params;
-    const { multiplier, format } = req.body || {};
+    const { multiplier, format, applyScope } = req.body || {};
 
     const snapshot = await MessageExportSnapshot.findById(snapshotId);
     if (!snapshot || snapshot.adminId.toString() !== adminId.toString()) {
@@ -482,9 +495,12 @@ const reexportSnapshot = async (req, res) => {
 
     // Recompute messages for the same time window
     const stats = await aggregateStatsForWindow(adminId, snapshot.startTime, snapshot.endTime);
-    const messages = buildMessages(stats, { multiplier: typeof multiplier === 'number' ? multiplier : 1.0, labels: format });
+    const usedMultiplier = typeof multiplier === 'number' ? multiplier : 1.0;
+    const messages = buildMessages(stats, { multiplier: usedMultiplier, labels: format, applyScope });
 
     snapshot.messages = messages;
+    snapshot.multiplier = usedMultiplier;
+    if (applyScope) snapshot.applyScope = applyScope;
     await snapshot.save();
 
     res.json({ success: true, snapshot });

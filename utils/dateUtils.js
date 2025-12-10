@@ -93,25 +93,20 @@ const formatVietnamDateTime = (date) => {
  * @returns {Object} {startOfDay, endOfDay} - Date objects
  */
 const getVietnamDayRange = (dateString = null) => {
-  let targetDate;
-  
   if (dateString) {
-    // Nếu có dateString, tạo date từ string đó
-    targetDate = new Date(dateString + 'T00:00:00.000Z');
+    const startOfDay = new Date(`${dateString}T00:00:00+07:00`);
+    const endOfDay = new Date(`${dateString}T23:59:59.999+07:00`);
+    return { startOfDay, endOfDay };
   } else {
-    // Nếu không có, lấy ngày hiện tại
-    targetDate = new Date();
-    targetDate.setUTCHours(0, 0, 0, 0);
+    const vt = getVietnamTime();
+    const yyyy = vt.getFullYear();
+    const mm = String(vt.getMonth() + 1).padStart(2, '0');
+    const dd = String(vt.getDate()).padStart(2, '0');
+    const ds = `${yyyy}-${mm}-${dd}`;
+    const startOfDay = new Date(`${ds}T00:00:00+07:00`);
+    const endOfDay = new Date(`${ds}T23:59:59.999+07:00`);
+    return { startOfDay, endOfDay };
   }
-  
-  // Tạo thời điểm đầu ngày (00:00:00) theo UTC
-  const startOfDay = new Date(targetDate);
-  
-  // Tạo thời điểm cuối ngày (23:59:59.999) theo UTC
-  const endOfDay = new Date(targetDate);
-  endOfDay.setUTCHours(23, 59, 59, 999);
-  
-  return { startOfDay, endOfDay };
 };
 
 /**

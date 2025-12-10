@@ -33,6 +33,8 @@ const messageExportSnapshotSchema = new mongoose.Schema({
   startTime: { type: Date, required: true },
   endTime: { type: Date, required: true },
   messages: { type: messagesSchema, required: true },
+  multiplier: { type: Number, default: 1 },
+  applyScope: { type: mongoose.Schema.Types.Mixed },
   createdAt: { type: Date, default: Date.now }
 });
 
