@@ -116,6 +116,25 @@ const decideRequest = async (req, res) => {
     reqDoc.decisionNote = note || '';
     reqDoc.decidedAt = new Date();
     await reqDoc.save();
+    // Emit socket events:
+    try {
+      const io = req.app.get('socketio');
+      if (io) {
+        const adminRoom = adminId.toString();
+        const employeeRoom = reqDoc.employeeId.toString();
+        // Notify admin to refresh list
+        io.to(adminRoom).emit('invoice_change_request_decided', {
+          requestId: reqDoc._id.toString(),
+          status: reqDoc.status
+        });
+        // Notify employee with details
+        io.to(employeeRoom).emit('invoice_change_request_decided', {
+          invoiceId: reqDoc.invoiceId,
+          requestType: reqDoc.requestType,
+          status: reqDoc.status
+        });
+      }
+    } catch (e) {}
     return res.json({ success: true, request: reqDoc });
   } catch (error) {
     console.error('Decide invoice change request error:', error);
