@@ -27,6 +27,7 @@ const getAllAdmins = async (req, res) => {
         allowMessageExport: admin.allowMessageExport,
         allowChangePassword: admin.allowChangePassword,
         allowMessageExport: admin.allowMessageExport,
+        enforceDeleteApproval: !!admin.enforceDeleteApproval,
         storeId: admin.storeId?._id,
         storeName: admin.storeId?.name,
         storeAddress: admin.storeId?.address,
@@ -47,7 +48,7 @@ const getAllAdmins = async (req, res) => {
 // Tạo tài khoản admin mới
 const createAdmin = async (req, res) => {
   try {
-    const { username, password, name, email, storeId, allowChangePassword, allowMessageExport } = req.body;
+    const { username, password, name, email, storeId, allowChangePassword, allowMessageExport, enforceDeleteApproval } = req.body;
     const superAdminId = req.user.id;
 
     // Validate input
@@ -123,6 +124,8 @@ const createAdmin = async (req, res) => {
     // Quyền UI
     adminData.allowChangePassword = allowChangePassword !== undefined ? !!allowChangePassword : true;
     adminData.allowMessageExport = allowMessageExport !== undefined ? !!allowMessageExport : true;
+    // Chính sách
+    adminData.enforceDeleteApproval = enforceDeleteApproval !== undefined ? !!enforceDeleteApproval : false;
 
     console.log('Creating admin with data:', adminData);
     const newAdmin = new User(adminData);
@@ -165,7 +168,7 @@ const createAdmin = async (req, res) => {
 const updateAdmin = async (req, res) => {
   try {
     const { adminId } = req.params;
-    const { name, email, isActive, password, allowChangePassword, allowMessageExport } = req.body;
+    const { name, email, isActive, password, allowChangePassword, allowMessageExport, enforceDeleteApproval } = req.body;
     const superAdminId = req.user.id;
 
     // Kiểm tra admin tồn tại và thuộc về superadmin này
@@ -224,6 +227,7 @@ const updateAdmin = async (req, res) => {
     if (allowMessageExport !== undefined) adminToUpdate.allowMessageExport = !!allowMessageExport;
     if (allowChangePassword !== undefined) adminToUpdate.allowChangePassword = !!allowChangePassword;
     if (allowMessageExport !== undefined) adminToUpdate.allowMessageExport = !!allowMessageExport;
+    if (enforceDeleteApproval !== undefined) adminToUpdate.enforceDeleteApproval = !!enforceDeleteApproval;
 
     await adminToUpdate.save(); // Trigger pre('save') hook
 

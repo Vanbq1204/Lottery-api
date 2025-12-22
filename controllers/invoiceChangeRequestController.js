@@ -26,14 +26,16 @@ const createRequest = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Không có quyền yêu cầu cho hóa đơn này' });
     }
 
-    // Check lock snapshot: only allow request if invoice is actually locked
+    // Xác định điều kiện bắt buộc duyệt: hóa đơn nằm trong snapshot đã xuất HOẶC admin bật chính sách enforceDeleteApproval
     const lockedSnapshot = await MessageExportSnapshot.findOne({
       adminId: invoice.adminId,
       startTime: { $lte: invoice.printedAt },
       endTime: { $gte: invoice.printedAt }
     });
-    if (!lockedSnapshot) {
-      return res.status(400).json({ success: false, message: 'Hóa đơn chưa bị khóa bởi xuất tin nhắn, có thể sửa/xóa trực tiếp' });
+    const admin = await User.findById(invoice.adminId);
+    const mustRequireApproval = Boolean(lockedSnapshot) || Boolean(admin?.enforceDeleteApproval);
+    if (!mustRequireApproval) {
+      return res.status(400).json({ success: false, message: 'Hóa đơn không cần duyệt, có thể sửa/xóa trực tiếp' });
     }
 
     // Avoid duplicate pending/approved requests
@@ -52,6 +54,28 @@ const createRequest = async (req, res) => {
       reason: reason || ''
     });
     await reqDoc.save();
+
+    // Emit socket event to admin room for real-time UI update
+    try {
+      const io = req.app.get('socketio');
+      if (io) {
+        const adminRoom = invoice.adminId.toString();
+        io.to(adminRoom).emit('invoice_change_request', {
+          message: `Yêu cầu ${requestType} hóa đơn ${invoiceId} từ nhân viên`,
+          request: {
+            _id: reqDoc._id,
+            invoiceId: reqDoc.invoiceId,
+            requestType: reqDoc.requestType,
+            status: reqDoc.status,
+            employeeId: { name: employee.name, username: employee.username },
+            reason: reqDoc.reason,
+            requestedAt: reqDoc.requestedAt
+          }
+        });
+      }
+    } catch (e) {
+      // ignore socket errors
+    }
 
     return res.json({ success: true, message: 'Đã gửi yêu cầu tới admin', request: reqDoc });
   } catch (error) {

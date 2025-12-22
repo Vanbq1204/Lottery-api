@@ -126,6 +126,13 @@ if (!module.exports?.schema?.path('allowMessageExport')) {
   });
 }
 
+// Chính sách: yêu cầu admin duyệt để xóa hóa đơn (áp dụng cho admin)
+if (!module.exports?.schema?.path('enforceDeleteApproval')) {
+  userSchema.add({
+    enforceDeleteApproval: { type: Boolean, default: false }
+  });
+}
+
 
 
 module.exports = mongoose.model('User', userSchema);

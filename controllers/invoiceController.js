@@ -862,17 +862,16 @@ const deleteInvoice = async (req, res) => {
       startTime: { $lte: existingInvoice.printedAt },
       endTime: { $gte: existingInvoice.printedAt }
     });
-    if (lockedSnapshot) {
+    const adminUser = await User.findById(existingInvoice.adminId);
+    const mustRequireApproval = Boolean(lockedSnapshot) || Boolean(adminUser?.enforceDeleteApproval);
+    if (mustRequireApproval) {
       const InvoiceChangeRequest = require('../models/InvoiceChangeRequest');
       const approvedReq = await InvoiceChangeRequest.findOne({ invoiceId: existingInvoice.invoiceId, status: 'approved' });
-      if (approvedReq) {
-        // continue to delete
-      } else {
-        return res.status(403).json({
-          success: false,
-          code: 'INVOICE_LOCKED_BY_MESSAGE_EXPORT',
-          message: `Hóa đơn đã được xuất tin nhắn (Lần ${lockedSnapshot.sequence} ngày ${lockedSnapshot.date}). Không thể xóa.`
-        });
+      if (!approvedReq) {
+        const message = lockedSnapshot
+          ? `Hóa đơn đã được xuất tin nhắn (Lần ${lockedSnapshot.sequence} ngày ${lockedSnapshot.date}). Không thể xóa nếu chưa có duyệt.`
+          : 'Hóa đơn yêu cầu quyền admin để xóa. Vui lòng tạo yêu cầu và chờ admin duyệt.';
+        return res.status(403).json({ success: false, code: 'INVOICE_DELETE_REQUIRES_APPROVAL', message });
       }
     }
 
