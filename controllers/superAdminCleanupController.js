@@ -2,6 +2,7 @@ const Invoice = require('../models/Invoice');
 const WinningInvoice = require('../models/WinningInvoice');
 const Store = require('../models/Store');
 const User = require('../models/User');
+const InvoiceHistory = require('../models/InvoiceHistory');
 const mongoose = require('mongoose');
 const MessageExportSnapshot = require('../models/MessageExportSnapshot');
 const DailyReport = require('../models/DailyReport');
@@ -92,13 +93,21 @@ const getSuperAdminCleanupStats = async (req, res) => {
         });
 
         const hasDailyReport = await DailyReport.countDocuments({ storeId: store._id, date });
+
+        // Đếm số lượng lịch sử sửa đổi hóa đơn
+        const totalInvoiceHistory = await InvoiceHistory.countDocuments({
+          storeId: store._id,
+          actionDate: { $gte: startOfDay, $lte: endOfDay }
+        });
+
         adminData.totalDailyReports += hasDailyReport > 0 ? 1 : 0;
         adminData.stores.push({
           storeId: store._id,
           storeName: store.name,
           totalWinningInvoices,
           paidWinningInvoices,
-          hasDailyReport: hasDailyReport > 0
+          hasDailyReport: hasDailyReport > 0,
+          totalInvoiceHistory
         });
       }
 
@@ -157,13 +166,20 @@ const performSuperAdminCleanup = async (req, res) => {
       date
     });
 
+    // Xóa lịch sử sửa đổi hóa đơn
+    const deletedInvoiceHistoryResult = await InvoiceHistory.deleteMany({
+      storeId: { $in: storeIds },
+      actionDate: { $gte: startOfDay, $lte: endOfDay }
+    });
+
     return res.json({
       success: true,
       message: 'Xóa dữ liệu thành công',
       deletedInvoices: deletedInvoicesResult.deletedCount,
       deletedWinningInvoices: deletedWinningInvoicesResult.deletedCount,
       deletedSnapshots: deletedSnapshotsResult.deletedCount,
-      deletedDailyReports: deletedDailyReportsResult.deletedCount
+      deletedDailyReports: deletedDailyReportsResult.deletedCount,
+      deletedInvoiceHistory: deletedInvoiceHistoryResult.deletedCount
     });
   } catch (error) {
     console.error('SuperAdmin perform cleanup error:', error);

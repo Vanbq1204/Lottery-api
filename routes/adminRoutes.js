@@ -67,4 +67,31 @@ router.put('/invoice-change-requests/:requestId', authenticateToken, requireAdmi
 // Báo cáo cuối ngày theo cửa hàng cho admin
 router.get('/daily-reports', authenticateToken, requireAdmin, getAdminDailyReports);
 
+// Lịch sử sửa đổi hóa đơn theo cửa hàng
+router.get('/invoice-history/:storeId', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const adminId = req.user.id;
+    const InvoiceHistory = require('../models/InvoiceHistory');
+    const Store = require('../models/Store');
+
+    // Verify store belongs to this admin
+    const store = await Store.findOne({ _id: storeId, adminId });
+    if (!store) {
+      return res.status(403).json({ success: false, message: 'Không có quyền truy cập cửa hàng này' });
+    }
+
+    // Get history for this store
+    const history = await InvoiceHistory.find({ storeId })
+      .populate('employeeId', 'name username')
+      .sort({ actionDate: -1 })
+      .limit(100); // Giới hạn 100 records gần nhất
+
+    res.json({ success: true, history });
+  } catch (error) {
+    console.error('Error fetching invoice history:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server khi lấy lịch sử' });
+  }
+});
+
 module.exports = router;
