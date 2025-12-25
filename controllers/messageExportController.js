@@ -116,6 +116,123 @@ const aggregateStatsForWindow = async (adminId, startTime, endTime) => {
   return stats;
 };
 
+// Aggregate stats by store for admin between two times
+const aggregateStatsByStore = async (adminId, startTime, endTime) => {
+  const Store = require('../models/Store');
+  const invoices = await Invoice.find({
+    adminId: new mongoose.Types.ObjectId(adminId),
+    printedAt: { $gte: startTime, $lte: endTime }
+  }).populate('storeId', 'name');
+
+  const storeStatsMap = new Map(); // Map of storeId -> stats
+
+  invoices.forEach(inv => {
+    const storeIdStr = inv.storeId?._id?.toString();
+    const storeName = inv.storeId?.name || 'Unknown Store';
+
+    if (!storeIdStr) return;
+
+    if (!storeStatsMap.has(storeIdStr)) {
+      storeStatsMap.set(storeIdStr, {
+        storeId: storeIdStr,
+        storeName: storeName,
+        stats: {
+          loto: {},
+          loA: {},
+          '2s': {},
+          deaA: {},
+          '3s': {},
+          '4s': {},
+          grouped: { tong: {}, dau: {}, dit: {}, daua: {}, dita: {}, kep: {}, bo: {} },
+          xien: {},
+          xienquay: {}
+        }
+      });
+    }
+
+    const storeData = storeStatsMap.get(storeIdStr);
+    const stats = storeData.stats;
+
+    (inv.items || []).forEach(item => {
+      const betType = (item.betType || '').toLowerCase();
+      const numbersStr = item.numbers || '';
+      const totalAmount = parseInt(item.totalAmount || 0) || 0;
+      const amount = parseInt(item.amount || 0) || 0;
+      const points = parseInt(item.points || 0) || 0;
+
+      if (betType === 'loto') {
+        const nums = numbersStr.split(/[,\s]+/).filter(Boolean);
+        nums.forEach(n => {
+          const key = n.padStart(2, '0');
+          stats.loto[key] = (stats.loto[key] || 0) + points;
+        });
+      } else if (betType === 'loa') {
+        const nums = numbersStr.split(/[,\s]+/).filter(Boolean);
+        nums.forEach(n => {
+          const key = n.padStart(2, '0');
+          stats.loA[key] = (stats.loA[key] || 0) + points;
+        });
+      } else if (betType === '2s') {
+        const nums = numbersStr.split(/[,\s]+/).filter(Boolean);
+        nums.forEach(n => {
+          const key = n.padStart(2, '0');
+          stats['2s'][key] = (stats['2s'][key] || 0) + amount;
+        });
+      } else if (betType === 'deaa') {
+        const nums = numbersStr.split(/[,\s]+/).filter(Boolean);
+        nums.forEach(n => {
+          const key = n.padStart(2, '0');
+          stats.deaA[key] = (stats.deaA[key] || 0) + amount;
+        });
+      } else if (betType === '3s') {
+        const nums = numbersStr.split(/[,\s]+/).filter(Boolean);
+        const per = nums.length > 0 ? Math.floor(totalAmount / nums.length) : 0;
+        nums.forEach(n => {
+          const key = n.trim().padStart(3, '0');
+          stats['3s'][key] = (stats['3s'][key] || 0) + (amount || per);
+        });
+      } else if (betType === '4s') {
+        const nums = numbersStr.split(/[,\s]+/).filter(Boolean);
+        const per = nums.length > 0 ? Math.floor(totalAmount / nums.length) : 0;
+        nums.forEach(n => {
+          const key = n.trim().padStart(4, '0');
+          stats['4s'][key] = (stats['4s'][key] || 0) + (amount || per);
+        });
+      } else if (['tong', 'dau', 'dit', 'daua', 'dita', 'kep'].includes(betType)) {
+        const key = numbersStr.trim();
+        if (!key) return;
+        stats.grouped[betType][key] = (stats.grouped[betType][key] || 0) + amount;
+      } else if (betType === 'bo') {
+        const nums = numbersStr.split(/[,\s]+/).filter(Boolean);
+        const per = nums.length > 0 ? Math.floor(totalAmount / nums.length) : 0;
+        nums.forEach(n => {
+          const key = n.padStart(2, '0');
+          stats.grouped.bo[key] = (stats.grouped.bo[key] || 0) + (amount || per);
+        });
+      } else if (betType.includes('xien') && !betType.includes('quay')) {
+        const combos = numbersStr.split(',').map(c => c.trim()).filter(Boolean);
+        const perCombo = combos.length > 0 ? Math.floor(totalAmount / combos.length) : 0;
+        combos.forEach(combo => {
+          const numbers = combo.split(/[\s\-]+/).filter(Boolean);
+          const baseKey = numbers.join('-');
+          const key = item.isXienNhay ? `${baseKey} (xiên nháy)` : baseKey;
+          stats.xien[key] = (stats.xien[key] || 0) + (amount || perCombo);
+        });
+      } else if (betType.includes('xienquay')) {
+        const combos = numbersStr.split(',').map(c => c.trim()).filter(Boolean);
+        const per = amount || (combos.length > 0 ? Math.floor(totalAmount / combos.length) : 0);
+        combos.forEach(combo => {
+          const numbers = combo.split(/[\s\-]+/).filter(Boolean);
+          const key = numbers.join('-');
+          stats.xienquay[key] = (stats.xienquay[key] || 0) + per;
+        });
+      }
+    });
+  });
+
+  return Array.from(storeStatsMap.values());
+};
+
 // Build message strings from stats
 const buildMessages = (stats, options = {}) => {
   const multiplierInput = typeof options.multiplier === 'number' ? options.multiplier : 1;
@@ -429,7 +546,7 @@ const buildMessages = (stats, options = {}) => {
 const exportMessages = async (req, res) => {
   try {
     const adminId = req.user.id;
-    const { date, time, multiplier, format, applyScope } = req.body;
+    const { date, time, multiplier, format, applyScope, separateExport } = req.body;
     const { startOfDay } = getVietnamDayRange(date);
     const endTime = parseVietnamEndTime(date, time);
 
@@ -437,10 +554,21 @@ const exportMessages = async (req, res) => {
     const last = await MessageExportSnapshot.findOne({ adminId, date }).sort({ sequence: -1 });
     const startTime = last ? last.endTime : startOfDay;
 
-    // Tính stats và dựng message
+    // Tính stats và dựng message (tổng hợp cho tất cả cửa hàng - dùng cho preview)
     const stats = await aggregateStatsForWindow(adminId, startTime, endTime);
     const usedMultiplier = typeof multiplier === 'number' ? multiplier : 1.0;
     const messages = buildMessages(stats, { multiplier: usedMultiplier, labels: format, applyScope });
+
+    // Nếu separateExport được bật, tính stats riêng cho từng cửa hàng
+    let storeMessages = [];
+    if (separateExport) {
+      const storeStatsArray = await aggregateStatsByStore(adminId, startTime, endTime);
+      storeMessages = storeStatsArray.map(storeData => ({
+        storeId: storeData.storeId,
+        storeName: storeData.storeName,
+        messages: buildMessages(storeData.stats, { multiplier: usedMultiplier, labels: format, applyScope })
+      }));
+    }
 
     // Tạo snapshot mới
     const seq = (last?.sequence || 0) + 1;
@@ -452,7 +580,9 @@ const exportMessages = async (req, res) => {
       endTime,
       messages,
       multiplier: usedMultiplier,
-      applyScope
+      applyScope,
+      separateExport: separateExport || false,
+      storeMessages: storeMessages
     });
     await snapshot.save();
 
@@ -486,7 +616,7 @@ const reexportSnapshot = async (req, res) => {
   try {
     const adminId = req.user.id;
     const { snapshotId } = req.params;
-    const { multiplier, format, applyScope } = req.body || {};
+    const { multiplier, format, applyScope, separateExport } = req.body || {};
 
     const snapshot = await MessageExportSnapshot.findById(snapshotId);
     if (!snapshot || snapshot.adminId.toString() !== adminId.toString()) {
@@ -498,8 +628,22 @@ const reexportSnapshot = async (req, res) => {
     const usedMultiplier = typeof multiplier === 'number' ? multiplier : 1.0;
     const messages = buildMessages(stats, { multiplier: usedMultiplier, labels: format, applyScope });
 
+    // Recompute store messages if separateExport is enabled
+    let storeMessages = [];
+    const shouldSeparate = typeof separateExport === 'boolean' ? separateExport : snapshot.separateExport;
+    if (shouldSeparate) {
+      const storeStatsArray = await aggregateStatsByStore(adminId, snapshot.startTime, snapshot.endTime);
+      storeMessages = storeStatsArray.map(storeData => ({
+        storeId: storeData.storeId,
+        storeName: storeData.storeName,
+        messages: buildMessages(storeData.stats, { multiplier: usedMultiplier, labels: format, applyScope })
+      }));
+    }
+
     snapshot.messages = messages;
     snapshot.multiplier = usedMultiplier;
+    snapshot.separateExport = shouldSeparate;
+    snapshot.storeMessages = storeMessages;
     if (applyScope) snapshot.applyScope = applyScope;
     await snapshot.save();
 

@@ -35,6 +35,12 @@ const messageExportSnapshotSchema = new mongoose.Schema({
   messages: { type: messagesSchema, required: true },
   multiplier: { type: Number, default: 1 },
   applyScope: { type: mongoose.Schema.Types.Mixed },
+  separateExport: { type: Boolean, default: false }, // Flag for separate export by store
+  storeMessages: [{ // Array of per-store messages when separateExport is true
+    storeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Store', required: true },
+    storeName: { type: String, required: true },
+    messages: { type: messagesSchema, required: true }
+  }],
   createdAt: { type: Date, default: Date.now }
 });
 
