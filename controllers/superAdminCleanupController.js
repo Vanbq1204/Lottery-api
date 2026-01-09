@@ -35,18 +35,19 @@ const isDateDeletable = (dateStr) => {
   return (dateStr !== todayStr && dateStr !== yesterdayStr);
 };
 
-// GET /api/superadmin/cleanup/stats?date=YYYY-MM-DD
+// GET /api/superadmin/cleanup/stats?date=YYYY-MM-DD&allowRecentDates=true/false
 const getSuperAdminCleanupStats = async (req, res) => {
   try {
-    const { date } = req.query;
+    const { date, allowRecentDates } = req.query;
     const superAdminId = req.user.id;
 
     if (!date) {
       return res.status(400).json({ success: false, message: 'Thiếu tham số date' });
     }
 
-    // Validate retention rule
-    if (!isDateDeletable(date)) {
+    // Validate retention rule - bypass if allowRecentDates is true
+    const allowRecent = allowRecentDates === 'true';
+    if (!allowRecent && !isDateDeletable(date)) {
       return res.status(400).json({ success: false, message: 'Không thể xóa dữ liệu của 2 ngày gần nhất (hôm nay và hôm qua)' });
     }
 
@@ -122,53 +123,70 @@ const getSuperAdminCleanupStats = async (req, res) => {
 };
 
 // DELETE /api/superadmin/cleanup
-// Body: { date: 'YYYY-MM-DD', storeIds: ['id1', 'id2'] }
+// Body: { date: 'YYYY-MM-DD', stores: [{ storeId: 'id1', keepWinningInvoices: true }, ...], allowRecentDates: boolean }
 const performSuperAdminCleanup = async (req, res) => {
   try {
-    const { date, storeIds } = req.body; // Use body for array data
+    const { date, stores, allowRecentDates = false } = req.body;
     const superAdminId = req.user.id;
 
-    if (!date || !storeIds || !Array.isArray(storeIds) || storeIds.length === 0) {
-      return res.status(400).json({ success: false, message: 'Thiếu tham số date hoặc danh sách storeIds' });
+    if (!date || !stores || !Array.isArray(stores) || stores.length === 0) {
+      return res.status(400).json({ success: false, message: 'Thiếu tham số date hoặc danh sách stores' });
     }
 
-    // Validate retention rule
-    if (!isDateDeletable(date)) {
+    // Validate retention rule - bypass if allowRecentDates is true
+    if (!allowRecentDates && !isDateDeletable(date)) {
       return res.status(400).json({ success: false, message: 'Không thể xóa dữ liệu của 2 ngày gần nhất (hôm nay và hôm qua)' });
     }
 
     const { startOfDay, endOfDay } = getVietnamDayRange(date);
 
-    // Thực hiện xóa hàng loạt cho các store được chọn
+    // Phân loại stores theo keepWinningInvoices
+    const storesKeepWinning = stores.filter(s => s.keepWinningInvoices === true).map(s => s.storeId);
+    const storesDeleteAll = stores.filter(s => s.keepWinningInvoices !== true).map(s => s.storeId);
+    const allStoreIds = stores.map(s => s.storeId);
+
+    // Xóa hóa đơn cược cho TẤT CẢ các stores
     const deletedInvoicesResult = await Invoice.deleteMany({
-      storeId: { $in: storeIds },
+      storeId: { $in: allStoreIds },
       createdAt: { $gte: startOfDay, $lte: endOfDay }
     });
 
-    const deletedWinningInvoicesResult = await WinningInvoice.deleteMany({
-      storeId: { $in: storeIds },
-      createdAt: { $gte: startOfDay, $lte: endOfDay }
-    });
+    // Xóa hoá đơn thưởng CHỈ cho các stores có keepWinningInvoices = false
+    let deletedWinningInvoicesResult = { deletedCount: 0 };
+    let keptWinningInvoices = 0;
+
+    if (storesDeleteAll.length > 0) {
+      deletedWinningInvoicesResult = await WinningInvoice.deleteMany({
+        storeId: { $in: storesDeleteAll },
+        createdAt: { $gte: startOfDay, $lte: endOfDay }
+      });
+    }
+
+    // Đếm số lượng hoá đơn thưởng được giữ lại
+    if (storesKeepWinning.length > 0) {
+      keptWinningInvoices = await WinningInvoice.countDocuments({
+        storeId: { $in: storesKeepWinning },
+        createdAt: { $gte: startOfDay, $lte: endOfDay }
+      });
+    }
 
     // Xóa MessageExportSnapshot cho các admin liên quan đến các store được chọn
-    // 1. Tìm các adminId từ danh sách storeIds
-    const stores = await Store.find({ _id: { $in: storeIds } }).select('adminId');
-    const adminIds = [...new Set(stores.map(s => s.adminId.toString()))];
+    const storeDocuments = await Store.find({ _id: { $in: allStoreIds } }).select('adminId');
+    const adminIds = [...new Set(storeDocuments.map(s => s.adminId.toString()))];
 
-    // 2. Xóa snapshot của các admin này
     const deletedSnapshotsResult = await MessageExportSnapshot.deleteMany({
       adminId: { $in: adminIds },
       date
     });
 
     const deletedDailyReportsResult = await DailyReport.deleteMany({
-      storeId: { $in: storeIds },
+      storeId: { $in: allStoreIds },
       date
     });
 
     // Xóa lịch sử sửa đổi hóa đơn
     const deletedInvoiceHistoryResult = await InvoiceHistory.deleteMany({
-      storeId: { $in: storeIds },
+      storeId: { $in: allStoreIds },
       actionDate: { $gte: startOfDay, $lte: endOfDay }
     });
 
@@ -177,6 +195,7 @@ const performSuperAdminCleanup = async (req, res) => {
       message: 'Xóa dữ liệu thành công',
       deletedInvoices: deletedInvoicesResult.deletedCount,
       deletedWinningInvoices: deletedWinningInvoicesResult.deletedCount,
+      keptWinningInvoices: keptWinningInvoices,
       deletedSnapshots: deletedSnapshotsResult.deletedCount,
       deletedDailyReports: deletedDailyReportsResult.deletedCount,
       deletedInvoiceHistory: deletedInvoiceHistoryResult.deletedCount
