@@ -47,8 +47,14 @@ console.log('Loading superAdminRoutes...');
 console.log('getSuperAdminCleanupStats:', typeof getSuperAdminCleanupStats);
 console.log('performSuperAdminCleanup:', typeof performSuperAdminCleanup);
 const { getLotteryHistory, deleteLotteryHistoryByDate } = require('../controllers/superAdminLotteryHistoryController');
+const { getSuperAdminPrizeStatistics, getSuperAdminPrizeStatisticsByStores } = require('../controllers/superAdminPrizeStatsController');
+
 router.get('/system-statistics', authenticateToken, requireSuperAdmin, getSystemStatistics);
 router.get('/system-statistics/stores', authenticateToken, requireSuperAdmin, getAdminStoreStatistics);
+
+// Thống kê thưởng toàn hệ thống
+router.get('/system-prize-statistics', authenticateToken, requireSuperAdmin, getSuperAdminPrizeStatistics);
+router.get('/system-prize-statistics/stores', authenticateToken, requireSuperAdmin, getSuperAdminPrizeStatisticsByStores);
 // Lịch sử hệ thống: lịch sử kết quả xổ số
 router.get('/system-history/lottery', authenticateToken, requireSuperAdmin, getLotteryHistory);
 router.delete('/system-history/lottery', authenticateToken, requireSuperAdmin, deleteLotteryHistoryByDate);
