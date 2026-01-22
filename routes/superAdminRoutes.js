@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../controllers/authController');
+const { authenticateToken, changePassword } = require('../controllers/authController');
 const {
   getAllAdmins,
   createAdmin,
@@ -69,5 +69,8 @@ router.post('/session/force-relogin', authenticateToken, requireSuperAdmin, forc
 
 // Yêu cầu reload trang toàn hệ thống
 router.post('/session/force-reload', authenticateToken, requireSuperAdmin, forceReload);
+
+// Đổi mật khẩu superadmin (tự đổi)
+router.put('/change-password', authenticateToken, requireSuperAdmin, changePassword);
 
 module.exports = router;
