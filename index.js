@@ -80,6 +80,7 @@ const superAdminRoutes = require('./routes/superAdminRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
 const notificationRoutes = require('./routes/notifications');
 const dailyReportRoutes = require('./routes/dailyReportRoutes');
+const autoCleanupRoutes = require('./routes/autoCleanupRoutes');
 
 
 app.use('/api/auth', authRoutes);
@@ -93,6 +94,7 @@ app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/employee', employeeRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/daily-report', dailyReportRoutes);
+app.use('/api/auto-cleanup', autoCleanupRoutes);
 
 
 // Health check endpoint
@@ -115,6 +117,10 @@ mongoose.connect(MONGODB_URI)
     initializeData().catch(err => {
       console.error('❌ Error initializing data:', err);
     });
+
+    // Khởi động cron job cho auto cleanup
+    const { scheduleAutoCleanup } = require('./services/cronScheduler');
+    scheduleAutoCleanup();
   })
   .catch((error) => {
     console.error('❌ MongoDB connection error:', error);
