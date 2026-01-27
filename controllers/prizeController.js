@@ -7,10 +7,10 @@ const { getVietnamDayRange } = require('../utils/dateUtils');
 // Helper function để lấy multiplier theo storeId
 const getMultiplierByStore = async (storeId, betType, isActive = true) => {
   console.log(`[MULTIPLIER DEBUG] Tìm hệ số thưởng cho ${betType} với storeId: ${storeId}`);
-  const multiplier = await PrizeMultiplier.findOne({ 
-    storeId, 
-    betType, 
-    isActive 
+  const multiplier = await PrizeMultiplier.findOne({
+    storeId,
+    betType,
+    isActive
   });
   console.log(`[MULTIPLIER DEBUG] Kết quả tìm hệ số thưởng cho ${betType}: ${multiplier ? 'Tìm thấy: ' + multiplier.multiplier : 'Không tìm thấy'}`);
   return multiplier;
@@ -20,7 +20,7 @@ const getMultiplierByStore = async (storeId, betType, isActive = true) => {
 const combination = (n, k) => {
   if (k > n) return 0;
   if (k === 0 || k === n) return 1;
-  
+
   let result = 1;
   for (let i = 0; i < k; i++) {
     result = result * (n - i) / (i + 1);
@@ -32,9 +32,9 @@ const combination = (n, k) => {
 const getCombinations = (arr, k) => {
   if (k === 1) return arr.map(x => [x]);
   if (k === arr.length) return [arr];
-  
+
   const result = [];
-  
+
   for (let i = 0; i <= arr.length - k; i++) {
     const head = arr[i];
     const tailCombinations = getCombinations(arr.slice(i + 1), k - 1);
@@ -42,7 +42,7 @@ const getCombinations = (arr, k) => {
       result.push([head, ...tail]);
     });
   }
-  
+
   return result;
 };
 
@@ -50,7 +50,7 @@ const getCombinations = (arr, k) => {
 const generateXienQuayCombinations = (numbers) => {
   const n = numbers.length;
   const combinations = [];
-  
+
   if (n === 3) {
     // Xiên quay 3: 2C(3) + 3C(3) = 3 + 1 = 4 con
     combinations.push(...getCombinations(numbers, 2)); // 3 cặp 2 số
@@ -61,7 +61,7 @@ const generateXienQuayCombinations = (numbers) => {
     combinations.push(...getCombinations(numbers, 3)); // 4 bộ 3 số
     combinations.push(...getCombinations(numbers, 4)); // 1 bộ 4 số
   }
-  
+
   return combinations;
 };
 const LotteryResult = require('../models/lotteryResult');
@@ -69,21 +69,21 @@ const LotteryResult = require('../models/lotteryResult');
 // Hàm lấy tất cả số cuối 2 chữ số từ kết quả xổ số
 const extractLotoNumbers = (lotteryResult) => {
   const lotoNumbers = [];
-  
+
   if (!lotteryResult || !lotteryResult.results) return lotoNumbers;
-  
+
   const results = lotteryResult.results;
-  
+
   // Lấy từ giải đặc biệt
   if (results.gdb) {
     lotoNumbers.push(results.gdb.slice(-2));
   }
-  
+
   // Lấy từ giải nhất
   if (results.g1) {
     lotoNumbers.push(results.g1.slice(-2));
   }
-  
+
   // Lấy từ giải nhì
   if (results.g2 && Array.isArray(results.g2)) {
     results.g2.forEach(num => {
@@ -92,7 +92,7 @@ const extractLotoNumbers = (lotteryResult) => {
       }
     });
   }
-  
+
   // Lấy từ giải ba đến bảy
   ['g3', 'g4', 'g5', 'g6', 'g7'].forEach(prize => {
     if (results[prize] && Array.isArray(results[prize])) {
@@ -103,7 +103,7 @@ const extractLotoNumbers = (lotteryResult) => {
       });
     }
   });
-  
+
   return lotoNumbers;
 };
 
@@ -125,7 +125,7 @@ const extractLoANumbers = (lotteryResult) => {
   collectFirst2(results.gdb);
   collectFirst2(results.g1);
   (results.g2 || []).forEach(collectFirst2);
-  ['g3','g4','g5','g6','g7'].forEach(prize => {
+  ['g3', 'g4', 'g5', 'g6', 'g7'].forEach(prize => {
     (results[prize] || []).forEach(collectFirst2);
   });
   return numbers;
@@ -176,24 +176,24 @@ const calculateLotoPrize = async (invoiceItem, lotteryResult, storeId) => {
   const lotoNumbers = extractLotoNumbers(lotteryResult);
   console.log(`[PRIZE DEBUG] --> Các số lô trúng thưởng từ KQXS: [${lotoNumbers.join(', ')}]`);
   const prizeMultiplier = await getMultiplierByStore(storeId, 'loto');
-  
+
   if (!prizeMultiplier) {
     throw new Error('Không tìm thấy hệ số thưởng cho lô');
   }
-  
+
   let totalWinningPoints = 0;
   const winningDetails = [];
-  
+
   if (invoiceItem.numbers) {
     const betNumbers = invoiceItem.numbers.split(/[\s,]+/).filter(n => n.length > 0);
     const betPoints = parseInt(invoiceItem.points) || 0;
     console.log(`[PRIZE DEBUG] ---> Các số lô đã cược: [${betNumbers.join(', ')}] với ${betPoints} điểm`);
-    
+
     betNumbers.forEach(number => {
       const paddedNumber = number.padStart(2, '0');
       const occurrences = countLotoOccurrences(lotoNumbers, paddedNumber);
       console.log(`[PRIZE DEBUG] -----> Kiểm tra số ${paddedNumber}: trúng ${occurrences} lần.`);
-      
+
       if (occurrences > 0) {
         const winningPoints = betPoints * occurrences;
         totalWinningPoints += winningPoints;
@@ -206,7 +206,7 @@ const calculateLotoPrize = async (invoiceItem, lotteryResult, storeId) => {
       }
     });
   }
-  
+
   if (totalWinningPoints > 0) {
     const perNumberStrings = winningDetails.map(d => `${d.number}x${d.occurrences}(${d.betPoints * d.occurrences}đ)`);
     const detailString = `${perNumberStrings.join(', ')} = ${totalWinningPoints}đ`;
@@ -221,7 +221,7 @@ const calculateLotoPrize = async (invoiceItem, lotteryResult, storeId) => {
       detailString: detailString
     };
   }
-  
+
   return null;
 };
 
@@ -232,25 +232,25 @@ const calculate2sPrize = async (invoiceItem, lotteryResult, storeId) => {
   if (!specialPrize) {
     return null;
   }
-  
+
   const lastTwoDigits = specialPrize.slice(-2);
   console.log(`[PRIZE DEBUG] --> 2 số cuối giải đặc biệt: ${lastTwoDigits}`);
-  
+
   const prizeMultiplier = await getMultiplierByStore(storeId, '2s');
   if (!prizeMultiplier) {
     throw new Error('Không tìm thấy hệ số thưởng cho 2 số');
   }
-  
+
   let totalWinningAmount = 0;
   const winningDetails = [];
   let betNumbers = [];
   let betAmount = 0;
-  
+
   if (invoiceItem.numbers) {
     betNumbers = invoiceItem.numbers.split(/[\s,]+/).filter(n => n.length > 0);
     betAmount = parseInt(invoiceItem.amount) || 0;
     console.log(`[PRIZE DEBUG] ---> Các số 2 số đã cược: [${betNumbers.join(', ')}] với ${betAmount} VNĐ`);
-    
+
     betNumbers.forEach(number => {
       const paddedNumber = number.padStart(2, '0');
       if (paddedNumber === lastTwoDigits) {
@@ -265,7 +265,7 @@ const calculate2sPrize = async (invoiceItem, lotteryResult, storeId) => {
       }
     });
   }
-  
+
   if (totalWinningAmount > 0) {
     return {
       betType: '2s',
@@ -278,7 +278,7 @@ const calculate2sPrize = async (invoiceItem, lotteryResult, storeId) => {
       detailString: winningDetails.map(d => `${d.number}: ${d.betAmount}n x ${prizeMultiplier.multiplier} = ${d.winningAmount.toLocaleString('vi-VN')} đ`).join(', ')
     };
   }
-  
+
   return null;
 };
 
@@ -295,26 +295,26 @@ const calculateTongPrize = async (invoiceItem, lotteryResult, storeId) => {
   if (!specialPrize) {
     return null;
   }
-  
+
   const lastTwoDigits = specialPrize.slice(-2);
   const resultSum = calculateSum(lastTwoDigits);
   console.log(`[PRIZE DEBUG] --> 2 số cuối giải đặc biệt: ${lastTwoDigits}, tổng: ${resultSum}`);
-  
+
   const prizeMultiplier = await getMultiplierByStore(storeId, 'tong');
   if (!prizeMultiplier) {
     throw new Error('Không tìm thấy hệ số thưởng cho tổng');
   }
-  
+
   let totalWinningAmount = 0;
   const winningDetails = [];
   let betSums = [];
   let betAmount = 0;
-  
+
   if (invoiceItem.numbers) {
     betSums = invoiceItem.numbers.split(/[\s,]+/).filter(n => n.length > 0);
     betAmount = parseInt(invoiceItem.amount) || 0;
     console.log(`[PRIZE DEBUG] ---> Các tổng đã cược: [${betSums.join(', ')}] với ${betAmount} VNĐ`);
-    
+
     betSums.forEach(sum => {
       const betSum = parseInt(sum);
       if (betSum === resultSum) {
@@ -329,7 +329,7 @@ const calculateTongPrize = async (invoiceItem, lotteryResult, storeId) => {
       }
     });
   }
-  
+
   if (totalWinningAmount > 0) {
     return {
       betType: 'tong',
@@ -342,7 +342,7 @@ const calculateTongPrize = async (invoiceItem, lotteryResult, storeId) => {
       detailString: winningDetails.map(d => `Tổng ${d.sum}: ${d.betAmount}n x ${prizeMultiplier.multiplier} = ${d.winningAmount.toLocaleString('vi-VN')} đ`).join(', ')
     };
   }
-  
+
   return null;
 };
 
@@ -391,7 +391,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
   for (let i = 0; i < xienquayCombinations.length; i++) {
     const xienquayString = xienquayCombinations[i];
     const betNumbers = xienquayString.split(/[\s,-]+/).filter(n => n.length > 0);
-    
+
     console.log(`[XIENQUAY DEBUG] ---> Xử lý xiên quay ${i + 1}: [${betNumbers.join(', ')}] với ${betAmount} VNĐ`);
 
     const n = betNumbers.length;
@@ -406,16 +406,16 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
 
     // Kiểm tra từng tổ hợp xem có trúng không
     const winningCombinations = [];
-    
+
     for (const combo of allCombinations) {
       const comboLength = combo.length;
-      
+
       if (comboLength === 2) {
         // Kiểm tra cặp 2 số: cần cả 2 số đều xuất hiện ở 2 số cuối các giải
         const [num1, num2] = combo;
         const num1Wins = winningNumbers.includes(num1);
         const num2Wins = winningNumbers.includes(num2);
-        
+
         if (num1Wins && num2Wins) {
           winningCombinations.push({
             combination: combo,
@@ -424,23 +424,23 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
           });
           console.log(`[XIENQUAY DEBUG] -----> Trúng cặp: ${combo.join('-')} (${num1}✓, ${num2}✓)`);
         } else {
-          console.log(`[XIENQUAY DEBUG] -----> Không trúng: ${combo.join('-')} (${num1}${num1Wins?'✓':'✗'}, ${num2}${num2Wins?'✓':'✗'})`);
+          console.log(`[XIENQUAY DEBUG] -----> Không trúng: ${combo.join('-')} (${num1}${num1Wins ? '✓' : '✗'}, ${num2}${num2Wins ? '✓' : '✗'})`);
         }
       } else if (comboLength === 3) {
         // Xiên quay 3 số - kiểm tra tất cả cặp con
         const pairs = getCombinations(combo, 2);
         let matchCount = 0;
-        
+
         for (const pair of pairs) {
           const [num1, num2] = pair;
           const num1Wins = winningNumbers.includes(num1);
           const num2Wins = winningNumbers.includes(num2);
-          
+
           if (num1Wins && num2Wins) {
             matchCount++;
           }
         }
-        
+
         if (matchCount >= 3) {
           // Trúng cả 3 cặp
           winningCombinations.push({
@@ -464,17 +464,17 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
         // Xiên quay 4 số - kiểm tra tất cả cặp con
         const pairs = getCombinations(combo, 2);
         let matchCount = 0;
-        
+
         for (const pair of pairs) {
           const [num1, num2] = pair;
           const num1Wins = winningNumbers.includes(num1);
           const num2Wins = winningNumbers.includes(num2);
-          
+
           if (num1Wins && num2Wins) {
             matchCount++;
           }
         }
-        
+
         if (matchCount >= 4) {
           // Trúng cả 4 cặp
           winningCombinations.push({
@@ -525,7 +525,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
       if (combo.length === 2) {
         // Xiên quay 2 số - Xác định xem đây là xiên quay 3 hay xiên quay 4
         let targetBetType = '';
-        
+
         // Xác định loại xiên quay dựa vào số lượng con số đánh
         if (betNumbers.length === 3) {
           targetBetType = 'xienquay3_2con';
@@ -534,13 +534,13 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
           targetBetType = 'xienquay4_2con';
           description = `Xiên quay 4 - Trúng 2 con`;
         }
-        
+
         console.log(`[XIENQUAY DEBUG] -----> Xác định loại xiên quay: ${targetBetType}`);
-        
+
         // Tìm hệ số thưởng với betType chính xác
         let multiplierData = await getMultiplierByStore(storeId, targetBetType);
         console.log(`[XIENQUAY DEBUG] -----> Tìm hệ số thưởng cho ${targetBetType}: ${multiplierData ? 'Tìm thấy: ' + multiplierData.multiplier : 'Không tìm thấy'}`);
-        
+
         if (multiplierData) {
           multiplier = multiplierData.multiplier;
           betType = targetBetType;
@@ -562,7 +562,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
           // Xiên quay 3 số - trúng 2 cặp
           // Thử tìm với betType chính xác
           let multiplierData = await getMultiplierByStore(storeId, 'xienquay3_2con');
-          
+
           // Nếu không tìm thấy, thử tìm với betType chung
           if (!multiplierData) {
             multiplierData = await getMultiplierByStore(storeId, 'xienquay');
@@ -570,7 +570,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
           } else {
             console.log(`[XIENQUAY DEBUG] -----> Tìm thấy hệ số thưởng cho xienquay3_2con: ${multiplierData.multiplier}`);
           }
-          
+
           if (multiplierData) {
             multiplier = multiplierData.multiplier;
             betType = 'xienquay3_2con';
@@ -596,7 +596,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
           // Xiên quay 4 số - trúng 3 cặp
           // Thử tìm với betType chính xác
           let multiplierData = await getMultiplierByStore(storeId, 'xienquay4_3con');
-          
+
           // Nếu không tìm thấy, thử tìm với betType chung
           if (!multiplierData) {
             multiplierData = await getMultiplierByStore(storeId, 'xienquay');
@@ -604,7 +604,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
           } else {
             console.log(`[XIENQUAY DEBUG] -----> Tìm thấy hệ số thưởng cho xienquay4_3con: ${multiplierData.multiplier}`);
           }
-          
+
           if (multiplierData) {
             multiplier = multiplierData.multiplier;
             betType = 'xienquay4_3con';
@@ -620,7 +620,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
           // Xiên quay 4 số - trúng 2 cặp
           // Thử tìm với betType chính xác
           let multiplierData = await getMultiplierByStore(storeId, 'xienquay4_2con');
-          
+
           // Nếu không tìm thấy, thử tìm với betType chung
           if (!multiplierData) {
             multiplierData = await getMultiplierByStore(storeId, 'xienquay');
@@ -628,7 +628,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
           } else {
             console.log(`[XIENQUAY DEBUG] -----> Tìm thấy hệ số thưởng cho xienquay4_2con: ${multiplierData.multiplier}`);
           }
-          
+
           if (multiplierData) {
             multiplier = multiplierData.multiplier;
             betType = 'xienquay4_2con';
@@ -654,7 +654,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
     if (bestMultiplier > 0) {
       const winningAmount = betAmount * bestMultiplier * 1000;
       totalPrizeAmount += winningAmount;
-      
+
       totalWinnings.push({
         betType: bestBetType,
         betTypeLabel: bestDescription,
@@ -666,7 +666,7 @@ const calculateXienQuayPrize = async (invoiceItem, lotteryResult, storeId) => {
         prizeAmount: winningAmount,
         detailString: `${bestDescription}: ${betAmount}n x ${bestMultiplier} = ${winningAmount.toLocaleString('vi-VN')} đ`
       });
-      
+
       console.log(`[XIENQUAY DEBUG] ---> Xiên quay ${i + 1} trúng! Thưởng: ${winningAmount} VNĐ`);
     }
   }
@@ -701,7 +701,7 @@ const calculateXienPrize = async (invoiceItem, lotteryResult, storeId) => {
 
   // Lấy 2 số cuối của tất cả giải
   const winningNumbers = allPrizes.map(prize => prize.slice(-2));
-  
+
   // Đếm số lần xuất hiện của mỗi số
   const numberCounts = {};
   winningNumbers.forEach(num => {
@@ -731,7 +731,7 @@ const calculateXienPrize = async (invoiceItem, lotteryResult, storeId) => {
   for (let i = 0; i < xienCombinations.length; i++) {
     const xienString = xienCombinations[i];
     const betNumbers = xienString.split(/[\s,-]+/).filter(n => n.length > 0);
-    
+
     console.log(`[XIEN DEBUG] ---> Xử lý xiên ${i + 1}: [${betNumbers.join(', ')}] với ${betAmount} VNĐ`);
 
     const n = betNumbers.length;
@@ -743,11 +743,11 @@ const calculateXienPrize = async (invoiceItem, lotteryResult, storeId) => {
     // Kiểm tra số trúng và số lần xuất hiện
     const hitNumbers = [];
     const multiHitNumbers = []; // Số xuất hiện ≥2 lần
-    
+
     for (const num of betNumbers) {
       const paddedNum = num.padStart(2, '0');
       const count = numberCounts[paddedNum] || 0;
-      
+
       if (count > 0) {
         hitNumbers.push({ number: paddedNum, count });
         if (count >= 2) {
@@ -761,7 +761,7 @@ const calculateXienPrize = async (invoiceItem, lotteryResult, storeId) => {
 
     const hitCount = hitNumbers.length;
     const multiHitCount = multiHitNumbers.length;
-    
+
     console.log(`[XIEN DEBUG] ---> Xiên ${i + 1}: Trúng ${hitCount}/${n} số, trong đó ${multiHitCount} số ≥2 nháy`);
 
     if (hitCount === 0) {
@@ -793,11 +793,11 @@ const calculateXienPrize = async (invoiceItem, lotteryResult, storeId) => {
           bestBetType = 'xien2_1hit';
         }
       }
-      
+
       // Logic đặc biệt cho xiên nháy
       if (invoiceItem.isXienNhay) {
         console.log(`[XIEN DEBUG] ---> Đây là xiên nháy, áp dụng logic đặc biệt`);
-        
+
         // Trường hợp 1: 1 con có ≥2 nháy và con còn lại không trúng
         if (hitCount === 1 && multiHitCount >= 1) {
           const multiplierData = await getMultiplierByStore(storeId, 'xien2_full');
@@ -890,7 +890,7 @@ const calculateXienPrize = async (invoiceItem, lotteryResult, storeId) => {
     if (bestMultiplier > 0) {
       const winningAmount = betAmount * bestMultiplier * 1000;
       totalPrizeAmount += winningAmount;
-      
+
       totalWinnings.push({
         betType: bestBetType,
         betTypeLabel: invoiceItem.isXienNhay ? `Xiên ${n} nháy` : `Xiên ${n}`,
@@ -902,7 +902,7 @@ const calculateXienPrize = async (invoiceItem, lotteryResult, storeId) => {
         detailString: `${bestDescription}: ${betAmount}n x ${bestMultiplier} = ${winningAmount.toLocaleString('vi-VN')} đ`,
         isXienNhay: invoiceItem.isXienNhay || false
       });
-      
+
       console.log(`[XIEN DEBUG] ---> Xiên ${i + 1} trúng! Thưởng: ${winningAmount} VNĐ`);
     }
   }
@@ -922,26 +922,26 @@ const calculateDauPrize = async (invoiceItem, lotteryResult, storeId) => {
   if (!specialPrize) {
     return null;
   }
-  
+
   const lastTwoDigits = specialPrize.slice(-2);
   const firstDigit = parseInt(lastTwoDigits.charAt(0));
   console.log(`[PRIZE DEBUG] --> 2 số cuối giải đặc biệt: ${lastTwoDigits}, đầu: ${firstDigit}`);
-  
+
   const prizeMultiplier = await getMultiplierByStore(storeId, 'dau');
   if (!prizeMultiplier) {
     throw new Error('Không tìm thấy hệ số thưởng cho đầu');
   }
-  
+
   let totalWinningAmount = 0;
   const winningDetails = [];
   let betHeads = [];
   let betAmount = 0;
-  
+
   if (invoiceItem.numbers) {
     betHeads = invoiceItem.numbers.split(/[\s,]+/).filter(n => n.length > 0);
     betAmount = parseInt(invoiceItem.amount) || 0;
     console.log(`[PRIZE DEBUG] ---> Các đầu đã cược: [${betHeads.join(', ')}] với ${betAmount} VNĐ`);
-    
+
     betHeads.forEach(head => {
       const betHead = parseInt(head);
       if (betHead === firstDigit) {
@@ -956,7 +956,7 @@ const calculateDauPrize = async (invoiceItem, lotteryResult, storeId) => {
       }
     });
   }
-  
+
   if (totalWinningAmount > 0) {
     return {
       betType: 'dau',
@@ -969,7 +969,7 @@ const calculateDauPrize = async (invoiceItem, lotteryResult, storeId) => {
       detailString: winningDetails.map(d => `Đầu ${d.head}: ${d.betAmount}n x ${prizeMultiplier.multiplier} = ${d.winningAmount.toLocaleString('vi-VN')} đ`).join(', ')
     };
   }
-  
+
   return null;
 };
 
@@ -980,26 +980,26 @@ const calculateDitPrize = async (invoiceItem, lotteryResult, storeId) => {
   if (!specialPrize) {
     return null;
   }
-  
+
   const lastTwoDigits = specialPrize.slice(-2);
   const lastDigit = parseInt(lastTwoDigits.charAt(1));
   console.log(`[PRIZE DEBUG] --> 2 số cuối giải đặc biệt: ${lastTwoDigits}, đít: ${lastDigit}`);
-  
+
   const prizeMultiplier = await getMultiplierByStore(storeId, 'dit');
   if (!prizeMultiplier) {
     throw new Error('Không tìm thấy hệ số thưởng cho đít');
   }
-  
+
   let totalWinningAmount = 0;
   const winningDetails = [];
   let betTails = [];
   let betAmount = 0;
-  
+
   if (invoiceItem.numbers) {
     betTails = invoiceItem.numbers.split(/[\s,]+/).filter(n => n.length > 0);
     betAmount = parseInt(invoiceItem.amount) || 0;
     console.log(`[PRIZE DEBUG] ---> Các đít đã cược: [${betTails.join(', ')}] với ${betAmount} VNĐ`);
-    
+
     betTails.forEach(tail => {
       const betTail = parseInt(tail);
       if (betTail === lastDigit) {
@@ -1014,7 +1014,7 @@ const calculateDitPrize = async (invoiceItem, lotteryResult, storeId) => {
       }
     });
   }
-  
+
   if (totalWinningAmount > 0) {
     return {
       betType: 'dit',
@@ -1027,7 +1027,7 @@ const calculateDitPrize = async (invoiceItem, lotteryResult, storeId) => {
       detailString: winningDetails.map(d => `Đít ${d.tail}: ${d.betAmount}n x ${prizeMultiplier.multiplier} = ${d.winningAmount.toLocaleString('vi-VN')} đ`).join(', ')
     };
   }
-  
+
   return null;
 };
 
@@ -1154,35 +1154,35 @@ const calculateKepPrize = async (invoiceItem, lotteryResult, storeId) => {
   if (!specialPrize) {
     return null;
   }
-  
+
   const lastTwoDigits = specialPrize.slice(-2);
   console.log(`[PRIZE DEBUG] --> 2 số cuối giải đặc biệt: ${lastTwoDigits}`);
-  
+
   // Định nghĩa kép bằng và kép lệch
   const kepBang = ['00', '11', '22', '33', '44', '55', '66', '77', '88', '99'];
   const kepLech = ['05', '50', '16', '61', '27', '72', '38', '83', '49', '94'];
-  
+
   const prizeMultiplier = await getMultiplierByStore(storeId, 'kep');
   if (!prizeMultiplier) {
     throw new Error('Không tìm thấy hệ số thưởng cho kép');
   }
-  
+
   let totalWinningAmount = 0;
   const winningDetails = [];
   let betKeps = [];
   let betAmount = 0;
-  
+
   if (invoiceItem.numbers) {
     betKeps = invoiceItem.numbers.split(/[\s,]+/).filter(n => n.length > 0);
     betAmount = parseInt(invoiceItem.amount) || 0;
     console.log(`[PRIZE DEBUG] ---> Các kép đã cược: [${betKeps.join(', ')}] với ${betAmount} VNĐ`);
-    
+
     betKeps.forEach(kep => {
       const kepType = kep.toLowerCase();
       let isWinning = false;
-      
+
       console.log(`[PRIZE DEBUG] -----> Kiểm tra kép: '${kepType}'`);
-      
+
       if ((kepType === 'bằng' || kepType === 'bang') && kepBang.includes(lastTwoDigits)) {
         isWinning = true;
         console.log(`[PRIZE DEBUG] -----> Kép bằng trúng! Đề về: ${lastTwoDigits}`);
@@ -1192,7 +1192,7 @@ const calculateKepPrize = async (invoiceItem, lotteryResult, storeId) => {
       } else {
         console.log(`[PRIZE DEBUG] -----> Không trúng. Đề về: ${lastTwoDigits}`);
       }
-      
+
       if (isWinning) {
         const winningAmount = betAmount * prizeMultiplier.multiplier * 1000;
         totalWinningAmount += winningAmount;
@@ -1205,7 +1205,7 @@ const calculateKepPrize = async (invoiceItem, lotteryResult, storeId) => {
       }
     });
   }
-  
+
   if (totalWinningAmount > 0) {
     return {
       betType: 'kep',
@@ -1218,7 +1218,7 @@ const calculateKepPrize = async (invoiceItem, lotteryResult, storeId) => {
       detailString: winningDetails.map(d => `${d.kep}: ${d.betAmount}n x ${prizeMultiplier.multiplier} = ${d.winningAmount.toLocaleString('vi-VN')} đ`).join(', ')
     };
   }
-  
+
   return null;
 };
 
@@ -1229,10 +1229,10 @@ const calculateBoPrize = async (invoiceItem, lotteryResult, storeId) => {
   if (!specialPrize) {
     return null;
   }
-  
+
   const lastTwoDigits = specialPrize.slice(-2);
   console.log(`[PRIZE DEBUG] --> 2 số cuối giải đặc biệt: ${lastTwoDigits}`);
-  
+
   // Định nghĩa 100 bộ
   const BO_DATA = {
     '00': ['00', '05', '50', '55'],
@@ -1352,12 +1352,12 @@ const calculateBoPrize = async (invoiceItem, lotteryResult, storeId) => {
     'chamtam': ['80', '81', '82', '83', '84', '85', '86', '87', '88', '89', '98', '78', '68', '58', '48', '38', '28', '18', '08'],
     'chamchin': ['90', '91', '92', '93', '94', '95', '96', '97', '98', '99', '89', '79', '69', '59', '49', '39', '29', '19', '09']
   };
-  
+
   const prizeMultiplier = await getMultiplierByStore(storeId, 'bo');
   if (!prizeMultiplier) {
     throw new Error('Không tìm thấy hệ số thưởng cho bộ');
   }
-  
+
   let totalWinningAmount = 0;
   const winningDetails = [];
   let betBos = [];
@@ -1372,20 +1372,20 @@ const calculateBoPrize = async (invoiceItem, lotteryResult, storeId) => {
       : [];
   });
   console.log(`[PRIZE DEBUG] Loaded dynamic BO groups: ${Object.keys(BO_DYNAMIC).join(', ')}`);
-  
+
   if (invoiceItem.numbers) {
     betAmount = parseInt(invoiceItem.amount) || 0;
     console.log(`[PRIZE DEBUG] ---> Dữ liệu bộ: "${invoiceItem.numbers}" với ${betAmount} VNĐ`);
-    
+
     // Với cấu trúc mới, item.numbers chứa tên bộ (ví dụ: "05 06 07")
     const boNumbers = invoiceItem.numbers.split(/[\s,]+/).filter(n => n.length > 0);
-    
+
     boNumbers.forEach(boName => {
       // Chuẩn hóa tên bộ: số thì pad 2 chữ số, tên thì viết thường không dấu (đã được enforce khi tạo)
       const raw = String(boName).trim();
       const nameKey = /^\d{1,2}$/.test(raw) ? raw.padStart(2, '0') : raw.toLowerCase();
       console.log(`[PRIZE DEBUG] ---> Kiểm tra bộ: ${nameKey}`);
-      
+
       const boList = BO_DYNAMIC[nameKey] || BO_DATA[nameKey];
       if (boList && boList.includes(lastTwoDigits)) {
         const winningAmount = betAmount * prizeMultiplier.multiplier * 1000;
@@ -1406,7 +1406,7 @@ const calculateBoPrize = async (invoiceItem, lotteryResult, storeId) => {
       }
     });
   }
-  
+
   if (totalWinningAmount > 0) {
     return {
       betType: 'bo',
@@ -1419,7 +1419,7 @@ const calculateBoPrize = async (invoiceItem, lotteryResult, storeId) => {
       detailString: winningDetails.map(d => `Bộ ${d.bo}: ${d.betAmount}n x ${prizeMultiplier.multiplier} = ${d.winningAmount.toLocaleString('vi-VN')} đ`).join(', ')
     };
   }
-  
+
   return null;
 };
 
@@ -1428,39 +1428,39 @@ const calculate3sPrize = async (invoiceItem, lotteryResult, storeId) => {
   const specialPrize = lotteryResult.results?.gdb || lotteryResult.specialPrize;
   const firstPrize = lotteryResult.results?.g1 || lotteryResult.firstPrize;
   const sixthPrizes = lotteryResult.results?.g6 || lotteryResult.sixthPrizes || [];
-  
+
   if (!specialPrize || !firstPrize) {
     return null;
   }
-  
+
   console.log(`[PRIZE DEBUG] --> Giải đặc biệt: ${specialPrize}, Giải 1: ${firstPrize}`);
   console.log(`[PRIZE DEBUG] --> Giải 6: [${sixthPrizes.join(', ')}]`);
-  
+
   const betAmount = parseInt(invoiceItem.amount) || 0;
   if (betAmount === 0) {
     return null;
   }
-  
+
   let betNumbers = [];
   if (invoiceItem.numbers) {
     betNumbers = invoiceItem.numbers.split(/[\s,]+/).filter(n => n.length > 0);
     console.log(`[PRIZE DEBUG] ---> Các số 3 số đã cược: [${betNumbers.join(', ')}] với ${betAmount} VNĐ`);
   }
-  
+
   const totalWinnings = [];
-  
+
   for (const number of betNumbers) {
     const paddedNumber = number.padStart(3, '0');
     const last3SpecialPrize = specialPrize.slice(-3);
     const last3FirstPrize = firstPrize.slice(-3);
     const last2SpecialPrize = specialPrize.slice(-2);
-    
+
     console.log(`[PRIZE DEBUG] -----> Kiểm tra số ${paddedNumber}:`);
     console.log(`[PRIZE DEBUG] -----> 3 số cuối GĐB: ${last3SpecialPrize}, 3 số cuối G1: ${last3FirstPrize}, 2 số cuối GĐB: ${last2SpecialPrize}`);
-    
+
     let winningType = null;
     let betType = null;
-    
+
     // 1. Trùng cả 3 số cuối giải đặc biệt và giải 1 (ưu tiên cao nhất)
     if (paddedNumber === last3SpecialPrize && paddedNumber === last3FirstPrize) {
       winningType = '3 số trùng cả GĐB và G1';
@@ -1491,11 +1491,11 @@ const calculate3sPrize = async (invoiceItem, lotteryResult, storeId) => {
       winningType = '3 số có 2 số cuối trùng GĐB';
       betType = '3s_2digits_gdb';
     }
-    
+
     if (winningType && betType) {
       // Tìm hệ số thưởng theo betType riêng biệt
       const prizeMultiplier = await getMultiplierByStore(storeId, betType);
-      
+
       if (prizeMultiplier) {
         const winningAmount = betAmount * prizeMultiplier.multiplier * 1000;
         totalWinnings.push({
@@ -1514,7 +1514,7 @@ const calculate3sPrize = async (invoiceItem, lotteryResult, storeId) => {
       console.log(`[PRIZE DEBUG] -----> Số ${paddedNumber} không trúng`);
     }
   }
-  
+
   if (totalWinnings.length > 0) {
     // Trả về array các winning items riêng biệt cho mỗi số trúng
     return totalWinnings.map(w => ({
@@ -1525,10 +1525,10 @@ const calculate3sPrize = async (invoiceItem, lotteryResult, storeId) => {
       winningCount: 1,
       multiplier: w.multiplier,
       prizeAmount: w.winningAmount,
-              detailString: `${w.number} (${w.type}): ${betAmount}n x ${w.multiplier} = ${w.winningAmount.toLocaleString('vi-VN')} đ`
+      detailString: `${w.number} (${w.type}): ${betAmount}n x ${w.multiplier} = ${w.winningAmount.toLocaleString('vi-VN')} đ`
     }));
   }
-  
+
   return null;
 };
 
@@ -1536,23 +1536,23 @@ const calculate3sPrize = async (invoiceItem, lotteryResult, storeId) => {
 const calculate4sPrize = async (invoiceItem, lotteryResult, storeId) => {
   try {
     console.log(`[4S PRIZE DEBUG] Bắt đầu tính thưởng 4 số cho: ${invoiceItem.numbers}`);
-    
+
     if (!lotteryResult || !lotteryResult.results || !lotteryResult.results.gdb) {
       console.log(`[4S PRIZE DEBUG] Không có kết quả xổ số hoặc giải đặc biệt`);
       return null;
     }
-    
+
     const gdbNumber = lotteryResult.results.gdb;
     const gdb4Digits = gdbNumber.slice(-4); // Lấy 4 số cuối của giải đặc biệt
     const gdb3Digits = gdbNumber.slice(-3); // Lấy 3 số cuối của giải đặc biệt
     const gdb2Digits = gdbNumber.slice(-2); // Lấy 2 số cuối của giải đặc biệt
-    
+
     console.log(`[4S PRIZE DEBUG] Giải đặc biệt: ${gdbNumber}`);
     console.log(`[4S PRIZE DEBUG] 4 số cuối GĐB: ${gdb4Digits}, 3 số cuối: ${gdb3Digits}, 2 số cuối: ${gdb2Digits}`);
-    
+
     const betAmount = invoiceItem.amount;
     const totalWinnings = [];
-    
+
     // Xử lý dữ liệu đầu vào - có thể là chuỗi hoặc mảng
     let betNumbers = [];
     if (typeof invoiceItem.numbers === 'string') {
@@ -1563,14 +1563,14 @@ const calculate4sPrize = async (invoiceItem, lotteryResult, storeId) => {
       console.log(`[4S PRIZE DEBUG] Định dạng numbers không hợp lệ: ${typeof invoiceItem.numbers}`);
       return null;
     }
-    
+
     console.log(`[4S PRIZE DEBUG] Các số 4 số đã cược: [${betNumbers.join(', ')}]`);
-    
+
     // Xử lý từng số trong danh sách
     for (const numberStr of betNumbers) {
       const paddedNumber = numberStr.padStart(4, '0'); // Đảm bảo số có 4 chữ số
       console.log(`[4S PRIZE DEBUG] Kiểm tra số: ${paddedNumber}`);
-      
+
       // Kiểm tra trùng 4 số
       if (paddedNumber === gdb4Digits) {
         console.log(`[4S PRIZE DEBUG] Trúng 4 số: ${paddedNumber}`);
@@ -1617,7 +1617,7 @@ const calculate4sPrize = async (invoiceItem, lotteryResult, storeId) => {
         }
       }
     }
-    
+
     if (totalWinnings.length > 0) {
       console.log(`[4S PRIZE DEBUG] Tổng số trúng: ${totalWinnings.length}`);
       // Trả về array các winning items riêng biệt cho mỗi số trúng
@@ -1632,10 +1632,10 @@ const calculate4sPrize = async (invoiceItem, lotteryResult, storeId) => {
         detailString: `${w.number} (${w.type}): ${betAmount}n x ${w.multiplier} = ${w.winningAmount.toLocaleString('vi-VN')} đ`
       }));
     }
-    
+
     console.log(`[4S PRIZE DEBUG] Không trúng thưởng`);
     return null;
-    
+
   } catch (error) {
     console.error('[4S PRIZE DEBUG] Lỗi tính thưởng 4 số:', error);
     return null;
@@ -1649,28 +1649,28 @@ const calculateInvoicePrize = async (invoice, lotteryDate, inputDate) => {
     // Chuyển đổi inputDate (YYYY-MM-DD) thành turnNum (DD/MM/YYYY)
     const [year, month, day] = inputDate.split('-');
     const turnNum = `${day}/${month}/${year}`;
-    
+
     console.log(`[PRIZE DEBUG] Tìm kết quả xổ số cho ngày: ${inputDate}`);
     console.log(`[PRIZE DEBUG] TurnNum: ${turnNum}`);
-    
+
     const lotteryResult = await LotteryResult.findOne({
       turnNum: turnNum
       // Loại bỏ storeId filter - tất cả store sử dụng chung kết quả
     });
-    
+
     if (!lotteryResult) {
       return null; // Không có kết quả xổ số
     }
-    
+
     const winningItems = [];
-    
+
     console.log(`[PRIZE DEBUG] === Bắt đầu xử lý hóa đơn: ${invoice.invoiceId} ===`);
 
     // Kiểm tra từng item trong hóa đơn
     for (const item of invoice.items) {
       let winningItem = null;
       console.log(`[PRIZE DEBUG] -> Đang kiểm tra item: loại cược ${item.betType}`);
-      
+
       switch (item.betType) {
         case 'loto':
           winningItem = await calculateLotoPrize(item, lotteryResult, invoice.storeId);
@@ -1724,24 +1724,24 @@ const calculateInvoicePrize = async (invoice, lotteryDate, inputDate) => {
           break;
         // TODO: Thêm logic cho các loại cược khác
       }
-      
+
       if (winningItem) {
         // Handle array return from calculate3sPrize
         if (Array.isArray(winningItem)) {
           winningItems.push(...winningItem);
         } else {
-        winningItems.push(winningItem);
+          winningItems.push(winningItem);
         }
       }
     }
-    
+
     if (winningItems.length > 0) {
       const totalPrizeAmount = winningItems.reduce((sum, item) => sum + item.prizeAmount, 0);
-      
+
       // Tạo lotteryDate đúng timezone Việt Nam
       // Sử dụng inputDate (YYYY-MM-DD) để tạo lotteryDate chính xác
       const vietnamLotteryDate = new Date(inputDate + 'T00:00:00+07:00');
-      
+
       return {
         invoiceId: `WIN_${invoice.invoiceId}`,
         originalInvoiceId: invoice.invoiceId,
@@ -1751,11 +1751,12 @@ const calculateInvoicePrize = async (invoice, lotteryDate, inputDate) => {
         customerName: invoice.customerName,
         lotteryDate: vietnamLotteryDate, // Sử dụng timezone Việt Nam
         date: inputDate, // Sử dụng ngày xổ số thay vì printedAt
+        createdAt: invoice.createdAt, // ⭐ Sử dụng ngày tạo hóa đơn gốc, không phải ngày hiện tại
         winningItems: winningItems,
         totalPrizeAmount: totalPrizeAmount
       };
     }
-    
+
     return null;
   } catch (error) {
     console.error('Lỗi tính thưởng hóa đơn:', error);
@@ -1768,20 +1769,20 @@ const calculatePrizesForDate = async (req, res) => {
   try {
     const { date } = req.body;
     const user = req.user;
-    
+
     console.log("🔥 [FRONTEND REQUEST] calculatePrizesForDate:");
     console.log(`  - Date: ${date}`);
     console.log(`  - User: ${user ? `${user.username} (${user.role}, store: ${user.storeId})` : "No user"}`);
     console.log(`  - Request body:`, req.body);
-    
+
     if (!date) {
       return res.status(400).json({ message: 'Vui lòng cung cấp ngày cần tính thưởng' });
     }
-    
+
     // Sử dụng timezone Việt Nam trực tiếp để tạo range thời gian
     const startOfDay = new Date(date + 'T00:00:00+07:00');
     const endOfDay = new Date(date + 'T23:59:59.999+07:00');
-    
+
     // Lấy tất cả hóa đơn trong ngày của cửa hàng dựa trên printedAt
     const filter = {
       printedAt: {
@@ -1789,32 +1790,32 @@ const calculatePrizesForDate = async (req, res) => {
         $lte: endOfDay
       }
     };
-    
+
     // Nếu có user (authenticated), lọc theo storeId
     if (user && user.storeId) {
       filter.storeId = user.storeId;
     }
-    
+
     console.log(`🔍 [FILTER] Query filter:`, JSON.stringify(filter, null, 2));
-    
+
     const invoices = await Invoice.find(filter);
-    
+
     console.log(`📋 [INVOICES] Found ${invoices.length} invoices:`);
     invoices.forEach((inv, index) => {
       const hasXien = inv.items.some(item => item.betType === 'xien');
       console.log(`  ${index + 1}. ${inv.invoiceId} ${hasXien ? "🎯 (có xiên)" : ""} - Store: ${inv.storeId}`);
     });
-    
+
     const winningInvoices = [];
-    
+
     for (const invoice of invoices) {
       const winningData = await calculateInvoicePrize(invoice, startOfDay, date);
       if (winningData) {
         // Kiểm tra xem đã tồn tại chưa
-        const existingWinning = await WinningInvoice.findOne({ 
-          originalInvoiceId: invoice.invoiceId 
+        const existingWinning = await WinningInvoice.findOne({
+          originalInvoiceId: invoice.invoiceId
         });
-        
+
         if (!existingWinning) {
           const winningInvoice = new WinningInvoice(winningData);
           await winningInvoice.save();
@@ -1848,21 +1849,21 @@ const calculatePrizesForDate = async (req, res) => {
     } catch (cleanupErr) {
       console.error('Cleanup non-winning invoices error:', cleanupErr);
     }
-    
+
     console.log(`🎉 [RESULT] Final result:`);
     console.log(`  - Total winning invoices: ${winningInvoices.length}`);
     winningInvoices.forEach((inv, index) => {
-      const hasXien = inv.winningItems && inv.winningItems.some(item => 
+      const hasXien = inv.winningItems && inv.winningItems.some(item =>
         item.betType && item.betType.startsWith('xien')
       );
       console.log(`  ${index + 1}. ${inv.originalInvoiceId} ${hasXien ? "🎯 (xiên)" : ""} - ${inv.totalPrizeAmount} VNĐ`);
     });
-    
+
     res.json({
       message: `Đã tính thưởng cho ${winningInvoices.length} hóa đơn (đã dọn dẹp hóa đơn không còn trúng nếu có)`,
       winningInvoices: winningInvoices
     });
-    
+
   } catch (error) {
     console.error('Lỗi tính thưởng:', error);
     res.status(500).json({ message: 'Lỗi server khi tính thưởng', error: error.message });
@@ -1874,9 +1875,9 @@ const getWinningInvoices = async (req, res) => {
   try {
     const user = req.user;
     const { date, isPaid } = req.query;
-    
+
     let filter = { storeId: user.storeId };
-    
+
     if (date) {
       const startOfDay = new Date(date + 'T00:00:00+07:00');
       const endOfDay = new Date(date + 'T23:59:59.999+07:00');
@@ -1885,19 +1886,19 @@ const getWinningInvoices = async (req, res) => {
         $lte: endOfDay
       };
     }
-    
+
     // Lọc theo trạng thái trả thưởng
     if (isPaid !== undefined) {
       filter.isPaid = isPaid === 'true';
     }
-    
+
     const winningInvoices = await WinningInvoice.find(filter)
       .populate('employeeId', 'username')
       .populate('paidBy', 'username')
       .sort({ createdAt: -1 });
-    
+
     res.json(winningInvoices);
-    
+
   } catch (error) {
     console.error('Lỗi lấy danh sách thưởng:', error);
     res.status(500).json({ message: 'Lỗi server', error: error.message });
@@ -1909,19 +1910,19 @@ const togglePaidStatus = async (req, res) => {
   try {
     const user = req.user;
     const { invoiceId } = req.params;
-    
-    const winningInvoice = await WinningInvoice.findOne({ 
+
+    const winningInvoice = await WinningInvoice.findOne({
       _id: invoiceId,
-      storeId: user.storeId 
+      storeId: user.storeId
     });
-    
+
     if (!winningInvoice) {
       return res.status(404).json({ message: 'Không tìm thấy hóa đơn trúng thưởng' });
     }
-    
+
     // Toggle trạng thái
     winningInvoice.isPaid = !winningInvoice.isPaid;
-    
+
     if (winningInvoice.isPaid) {
       winningInvoice.paidAt = new Date();
       winningInvoice.paidBy = user._id;
@@ -1929,15 +1930,15 @@ const togglePaidStatus = async (req, res) => {
       winningInvoice.paidAt = null;
       winningInvoice.paidBy = null;
     }
-    
+
     await winningInvoice.save();
-    
+
     const status = winningInvoice.isPaid ? 'đã trả' : 'chưa trả';
-    res.json({ 
+    res.json({
       message: `Đã cập nhật trạng thái ${status} thưởng`,
-      winningInvoice 
+      winningInvoice
     });
-    
+
   } catch (error) {
     console.error('Lỗi toggle trạng thái:', error);
     res.status(500).json({ message: 'Lỗi server', error: error.message });
@@ -1948,16 +1949,16 @@ const togglePaidStatus = async (req, res) => {
 const getPrizeMultipliers = async (req, res) => {
   try {
     const user = req.user;
-    
+
     if (!user.storeId) {
       return res.status(400).json({ message: 'User không có storeId' });
     }
-    
-    const multipliers = await PrizeMultiplier.find({ 
-      storeId: user.storeId, 
-      isActive: true 
+
+    const multipliers = await PrizeMultiplier.find({
+      storeId: user.storeId,
+      isActive: true
     }).sort({ betType: 1, subType: 1 });
-    
+
     res.json(multipliers);
   } catch (error) {
     console.error('Lỗi lấy hệ số thưởng:', error);
@@ -1969,35 +1970,35 @@ const updatePrizeMultiplier = async (req, res) => {
   try {
     const { betType, subType, multiplier, description } = req.body;
     const user = req.user;
-    
+
     if (!betType || multiplier === undefined || multiplier === null) {
       return res.status(400).json({ message: 'Thiếu thông tin bắt buộc' });
     }
-    
+
     if (!user.storeId) {
       return res.status(400).json({ message: 'User không có storeId' });
     }
-    
+
     const storeId = user.storeId;
-    
+
     const updatedMultiplier = await PrizeMultiplier.findOneAndUpdate(
       { storeId, betType, subType: subType || null },
-      { 
+      {
         storeId,
         betType,
         subType: subType || null,
-        multiplier, 
+        multiplier,
         description: description || `Hệ số thưởng ${betType}${subType ? ` (${subType})` : ''}`,
-        updatedBy: user._id 
+        updatedBy: user._id
       },
-      { 
-        new: true, 
-        upsert: true 
+      {
+        new: true,
+        upsert: true
       }
     );
-    
+
     res.json(updatedMultiplier);
-    
+
   } catch (error) {
     console.error('Lỗi cập nhật hệ số thưởng:', error);
     res.status(500).json({ message: 'Lỗi server', error: error.message });
@@ -2008,20 +2009,20 @@ const updatePrizeMultiplier = async (req, res) => {
 const initializeDefaultMultipliers = async () => {
   try {
     const Store = require('../models/Store');
-    
+
     // Lấy tất cả stores
     const stores = await Store.find();
-    
+
     if (stores.length === 0) {
       console.log('⏳ Chưa có store nào, bỏ qua khởi tạo hệ số thưởng');
       return;
     }
-    
+
     const defaultMultipliers = [
       { betType: 'loto', subType: null, multiplier: 80, description: 'Hệ số thưởng lô tô', isActive: true },
       { betType: '2s', subType: null, multiplier: 85, description: 'Hệ số thưởng 2 số (đề)', isActive: true },
       { betType: 'deaA', subType: null, multiplier: 85, description: 'Hệ số thưởng Đề A/Đầu A/Đít A (chung)', isActive: true },
-      
+
       // 5 betType riêng biệt cho 3 số
       { betType: '3s_gdb', subType: null, multiplier: 420, description: '3 số trùng giải đặc biệt', isActive: true },
       { betType: '3s_gdb_g1', subType: null, multiplier: 440, description: '3 số trùng cả giải đặc biệt và giải 1', isActive: true },
@@ -2029,12 +2030,12 @@ const initializeDefaultMultipliers = async () => {
       { betType: '3s_g1', subType: null, multiplier: 20, description: '3 số trùng giải 1', isActive: true },
       { betType: '3s_g6', subType: null, multiplier: 5, description: '3 số trùng giải 6', isActive: true },
       { betType: '3s_2digits_gdb', subType: null, multiplier: 5, description: '3 số có 2 số cuối trùng GĐB (x5)', isActive: true },
-      
+
       // 3 betType riêng biệt cho 4 số
       { betType: '4s_full', subType: null, multiplier: 1200, description: '4 số trùng hoàn toàn với 4 số cuối GĐB', isActive: true },
       { betType: '4s_3digits', subType: null, multiplier: 50, description: '3 số cuối trùng với 3 số cuối GĐB', isActive: true },
       { betType: '4s_2digits', subType: null, multiplier: 5, description: '2 số cuối trùng với 2 số cuối GĐB', isActive: true },
-      
+
       { betType: 'tong', subType: null, multiplier: 85, description: 'Hệ số thưởng tổng', isActive: true },
       { betType: 'kep', subType: null, multiplier: 85, description: 'Hệ số thưởng kép', isActive: true },
       { betType: 'dau', subType: null, multiplier: 85, description: 'Hệ số thưởng đầu', isActive: true },
@@ -2042,7 +2043,7 @@ const initializeDefaultMultipliers = async () => {
       { betType: 'bo', subType: null, multiplier: 85, description: 'Hệ số thưởng bộ', isActive: true },
       { betType: 'xien', subType: null, multiplier: 23, description: 'Hệ số thưởng xiên', isActive: false },
       { betType: 'xienquay', subType: null, multiplier: 23, description: 'Hệ số thưởng xiên quay', isActive: false },
-      
+
       // 9 loại xiên riêng biệt
       { betType: 'xien2_full', subType: null, multiplier: 12, description: 'Xiên 2 - Trúng cả 2 số', isActive: true },
       { betType: 'xien2_1hit', subType: null, multiplier: 1, description: 'Xiên 2 - Trúng 1 số (≥2 nháy)', isActive: true },
@@ -2053,7 +2054,7 @@ const initializeDefaultMultipliers = async () => {
       { betType: 'xien4_3hit_all', subType: null, multiplier: 30, description: 'Xiên 4 - Trúng 3 số (cả 3 ≥2 nháy)', isActive: true },
       { betType: 'xien4_3hit_two', subType: null, multiplier: 15, description: 'Xiên 4 - Trúng 3 số (2 số ≥2 nháy)', isActive: true },
       { betType: 'xien4_3hit_one', subType: null, multiplier: 5, description: 'Xiên 4 - Trúng 3 số (1 số ≥2 nháy)', isActive: true },
-      
+
       // 5 loại xiên quay riêng biệt
       { betType: 'xienquay4_full', subType: null, multiplier: 362, description: 'Xiên quay 4 - Trúng cả 4 con', isActive: true },
       { betType: 'xienquay4_3con', subType: null, multiplier: 81, description: 'Xiên quay 4 - Trúng 3 con', isActive: true },
@@ -2061,13 +2062,13 @@ const initializeDefaultMultipliers = async () => {
       { betType: 'xienquay3_full', subType: null, multiplier: 81, description: 'Xiên quay 3 - Trúng cả 3 con', isActive: true },
       { betType: 'xienquay3_2con', subType: null, multiplier: 12, description: 'Xiên quay 3 - Trúng 2 con', isActive: true }
     ];
-    
+
     let storesInitialized = 0;
-    
+
     for (const store of stores) {
       // Kiểm tra xem store này đã có hệ số thưởng chưa
       const existingCount = await PrizeMultiplier.countDocuments({ storeId: store._id });
-      
+
       if (existingCount === 0) {
         // Chưa có hệ số thưởng cho store này, tạo mới tất cả
         for (const multiplierTemplate of defaultMultipliers) {
@@ -2075,35 +2076,35 @@ const initializeDefaultMultipliers = async () => {
             ...multiplierTemplate,
             storeId: store._id
           };
-          
+
           await PrizeMultiplier.create(multiplier);
         }
-        
+
         storesInitialized++;
         console.log(`✅ Khởi tạo hệ số thưởng cho store: ${store.name}`);
       } else {
         // Store đã có hệ số thưởng, kiểm tra xem có thiếu loại nào không
         let missingMultipliers = 0;
-        
+
         for (const multiplierTemplate of defaultMultipliers) {
           const existing = await PrizeMultiplier.findOne({
             storeId: store._id,
             betType: multiplierTemplate.betType,
             subType: multiplierTemplate.subType
           });
-          
+
           if (!existing) {
             // Thiếu hệ số này, tạo mới
             const multiplier = {
               ...multiplierTemplate,
               storeId: store._id
             };
-            
+
             await PrizeMultiplier.create(multiplier);
             missingMultipliers++;
           }
         }
-        
+
         if (missingMultipliers > 0) {
           console.log(`✅ Store ${store.name} đã có ${existingCount} hệ số thưởng, thêm ${missingMultipliers} hệ số mới`);
           storesInitialized++;
@@ -2112,13 +2113,13 @@ const initializeDefaultMultipliers = async () => {
         }
       }
     }
-    
+
     if (storesInitialized > 0) {
       console.log(`🎉 Đã khởi tạo hệ số thưởng cho ${storesInitialized} store(s)`);
     } else {
       console.log('✅ Tất cả stores đã có hệ số thưởng');
     }
-    
+
   } catch (error) {
     console.error('Lỗi khởi tạo hệ số thưởng:', error);
   }
