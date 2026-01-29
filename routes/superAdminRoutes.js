@@ -41,7 +41,7 @@ router.delete('/stores/:storeId', authenticateToken, requireSuperAdmin, deleteSt
 
 // Thống kê toàn bộ hệ thống (gộp theo admin)
 const { getSystemStatistics, getAdminStoreStatistics } = require('../controllers/superAdminSystemStatsController');
-const { getForceReloginStatus, forceRelogin, forceReload } = require('../controllers/superAdminSessionController');
+const { getForceReloginStatus, forceRelogin, forceReload, getMaintenanceStatus, setMaintenanceMode } = require('../controllers/superAdminSessionController');
 const { getSuperAdminCleanupStats, performSuperAdminCleanup } = require('../controllers/superAdminCleanupController');
 console.log('Loading superAdminRoutes...');
 console.log('getSuperAdminCleanupStats:', typeof getSuperAdminCleanupStats);
@@ -69,6 +69,10 @@ router.post('/session/force-relogin', authenticateToken, requireSuperAdmin, forc
 
 // Yêu cầu reload trang toàn hệ thống
 router.post('/session/force-reload', authenticateToken, requireSuperAdmin, forceReload);
+
+// Quản lý chế độ bảo trì hệ thống
+router.get('/session/maintenance/status', authenticateToken, requireSuperAdmin, getMaintenanceStatus);
+router.post('/session/maintenance', authenticateToken, requireSuperAdmin, setMaintenanceMode);
 
 // Đổi mật khẩu superadmin (tự đổi)
 router.put('/change-password', authenticateToken, requireSuperAdmin, changePassword);

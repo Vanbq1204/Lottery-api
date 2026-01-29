@@ -2,6 +2,22 @@ const express = require('express');
 const router = express.Router();
 const { login, authenticateToken, getProfile } = require('../controllers/authController');
 const Store = require('../models/Store'); // Added import for Store model
+const GlobalSettings = require('../models/GlobalSettings');
+
+// GET /api/auth/maintenance - Kiểm tra trạng thái bảo trì (public)
+router.get('/maintenance', async (req, res) => {
+  try {
+    const settings = await GlobalSettings.findOne({ key: 'global' });
+    res.json({
+      success: true,
+      maintenanceMode: settings?.maintenanceMode || false,
+      maintenanceActivatedAt: settings?.maintenanceActivatedAt || null
+    });
+  } catch (error) {
+    console.error('Get maintenance status error:', error);
+    res.json({ success: true, maintenanceMode: false });
+  }
+});
 
 // POST /api/auth/login - Đăng nhập
 router.post('/login', login);

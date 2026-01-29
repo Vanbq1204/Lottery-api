@@ -24,6 +24,20 @@ const login = async (req, res) => {
       });
     }
 
+    // Kiểm tra maintenance mode - chỉ cho phép superadmin đăng nhập
+    const settings = await GlobalSettings.findOne({ key: 'global' });
+    if (settings?.maintenanceMode === true) {
+      // Tìm user để kiểm tra role
+      const tempUser = await User.findOne({ username });
+      if (!tempUser || tempUser.role !== 'superadmin') {
+        return res.status(503).json({
+          success: false,
+          message: 'Hệ thống đang bảo trì, vui lòng quay lại sau. Xin lỗi vì sự bất tiện này.',
+          maintenanceMode: true
+        });
+      }
+    }
+
     // Tìm user
     const user = await User.findOne({ username }).select('+password');
     if (!user) {
