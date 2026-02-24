@@ -8,6 +8,7 @@ const { getTimeSettings, updateTimeSettings, checkBettingAllowed } = require('..
 const { getCleanupStats, performCleanup } = require('../controllers/dataCleanupController');
 const { exportMessages, getExportHistory, reexportSnapshot } = require('../controllers/messageExportController');
 const { listRequests: listInvoiceChangeRequests, decideRequest: decideInvoiceChangeRequest } = require('../controllers/invoiceChangeRequestController');
+const { getAllGroupsForAdmin } = require('../controllers/specialNumberGroupController');
 const { authenticateToken, changePassword } = require('../controllers/authController');
 const { getAdminDailyReports } = require('../controllers/adminDailyReportController');
 
@@ -66,6 +67,9 @@ router.put('/invoice-change-requests/:requestId', authenticateToken, requireAdmi
 
 // Báo cáo cuối ngày theo cửa hàng cho admin
 router.get('/daily-reports', authenticateToken, requireAdmin, getAdminDailyReports);
+
+// Lấy danh sách special number groups (Bo dynamic) thuộc quyền admin
+router.get('/special-number-groups', authenticateToken, requireAdmin, getAllGroupsForAdmin);
 
 // Lịch sử sửa đổi hóa đơn theo cửa hàng
 router.get('/invoice-history/:storeId', authenticateToken, requireAdmin, async (req, res) => {

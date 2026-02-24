@@ -25,8 +25,7 @@ const getAllAdmins = async (req, res) => {
         isActive: admin.isActive,
         allowChangePassword: admin.allowChangePassword,
         allowMessageExport: admin.allowMessageExport,
-        allowChangePassword: admin.allowChangePassword,
-        allowMessageExport: admin.allowMessageExport,
+        allowExportSummary: admin.allowExportSummary !== false, // default true
         enforceDeleteApproval: !!admin.enforceDeleteApproval,
         storeId: admin.storeId?._id,
         storeName: admin.storeId?.name,
@@ -48,7 +47,7 @@ const getAllAdmins = async (req, res) => {
 // Tạo tài khoản admin mới
 const createAdmin = async (req, res) => {
   try {
-    const { username, password, name, email, storeId, allowChangePassword, allowMessageExport, enforceDeleteApproval } = req.body;
+    const { username, password, name, email, storeId, allowChangePassword, allowMessageExport, allowExportSummary, enforceDeleteApproval } = req.body;
     const superAdminId = req.user.id;
 
     // Validate input
@@ -121,9 +120,7 @@ const createAdmin = async (req, res) => {
     // Quyền UI
     adminData.allowChangePassword = allowChangePassword !== undefined ? !!allowChangePassword : true;
     adminData.allowMessageExport = allowMessageExport !== undefined ? !!allowMessageExport : true;
-    // Quyền UI
-    adminData.allowChangePassword = allowChangePassword !== undefined ? !!allowChangePassword : true;
-    adminData.allowMessageExport = allowMessageExport !== undefined ? !!allowMessageExport : true;
+    adminData.allowExportSummary = allowExportSummary !== undefined ? !!allowExportSummary : true;
     // Chính sách
     adminData.enforceDeleteApproval = enforceDeleteApproval !== undefined ? !!enforceDeleteApproval : false;
 
@@ -168,7 +165,7 @@ const createAdmin = async (req, res) => {
 const updateAdmin = async (req, res) => {
   try {
     const { adminId } = req.params;
-    const { name, email, isActive, password, allowChangePassword, allowMessageExport, enforceDeleteApproval } = req.body;
+    const { name, email, isActive, password, allowChangePassword, allowMessageExport, allowExportSummary, enforceDeleteApproval } = req.body;
     const superAdminId = req.user.id;
 
     // Kiểm tra admin tồn tại và thuộc về superadmin này
@@ -225,8 +222,7 @@ const updateAdmin = async (req, res) => {
     if (isActive !== undefined) adminToUpdate.isActive = isActive;
     if (allowChangePassword !== undefined) adminToUpdate.allowChangePassword = !!allowChangePassword;
     if (allowMessageExport !== undefined) adminToUpdate.allowMessageExport = !!allowMessageExport;
-    if (allowChangePassword !== undefined) adminToUpdate.allowChangePassword = !!allowChangePassword;
-    if (allowMessageExport !== undefined) adminToUpdate.allowMessageExport = !!allowMessageExport;
+    if (allowExportSummary !== undefined) adminToUpdate.allowExportSummary = !!allowExportSummary;
     if (enforceDeleteApproval !== undefined) adminToUpdate.enforceDeleteApproval = !!enforceDeleteApproval;
 
     await adminToUpdate.save(); // Trigger pre('save') hook

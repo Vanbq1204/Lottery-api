@@ -133,6 +133,12 @@ if (!module.exports?.schema?.path('enforceDeleteApproval')) {
   });
 }
 
+// Cho phép truy cập tab Tổng kết tin xuất
+if (!module.exports?.schema?.path('allowExportSummary')) {
+  userSchema.add({
+    allowExportSummary: { type: Boolean, default: true }
+  });
+}
 
 
 module.exports = mongoose.model('User', userSchema);

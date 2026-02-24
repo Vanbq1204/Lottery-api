@@ -81,7 +81,7 @@ const employeeRoutes = require('./routes/employeeRoutes');
 const notificationRoutes = require('./routes/notifications');
 const dailyReportRoutes = require('./routes/dailyReportRoutes');
 const autoCleanupRoutes = require('./routes/autoCleanupRoutes');
-
+const debtRoutes = require('./routes/debtRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/betting', bettingRoutes);
@@ -95,7 +95,7 @@ app.use('/api/employee', employeeRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/daily-report', dailyReportRoutes);
 app.use('/api/auto-cleanup', autoCleanupRoutes);
-
+app.use('/api/debt', debtRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

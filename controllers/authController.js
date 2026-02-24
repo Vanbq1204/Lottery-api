@@ -97,7 +97,8 @@ const login = async (req, res) => {
       storeName: user.storeName,
       storeId: user.storeId,
       allowChangePassword: user.allowChangePassword,
-      allowMessageExport: user.allowMessageExport
+      allowMessageExport: user.allowMessageExport,
+      allowExportSummary: user.allowExportSummary
     };
 
     res.json({

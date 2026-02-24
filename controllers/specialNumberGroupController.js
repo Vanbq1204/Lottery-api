@@ -42,6 +42,30 @@ const listGroups = async (req, res) => {
   }
 };
 
+// GET: lấy danh sách các bộ số đặc biệt cho tất cả store thuộc quyền của admin
+const getAllGroupsForAdmin = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const Store = require('../models/Store');
+
+    // Tìm các store của admin này
+    const stores = await Store.find({ adminId }).select('_id');
+    const storeIds = stores.map(s => s._id);
+
+    // Lấy toàn bộ nhóm "bo" active
+    const groups = await SpecialNumberGroup.find({
+      storeId: { $in: storeIds },
+      betType: 'bo',
+      isActive: true
+    });
+
+    res.json({ success: true, data: groups });
+  } catch (error) {
+    console.error('Get all special groups for admin error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server khi tải danh sách bộ số đặc biệt' });
+  }
+};
+
 // Helper: reserved BO names (fixed in code BODATA)
 const RESERVED_BO_NAMES = new Set([
   // 00-99
@@ -97,9 +121,9 @@ const createGroup = async (req, res) => {
   } catch (error) {
     console.error('Create special group error:', error);
     const isDuplicate = error.code === 11000;
-    res.status(isDuplicate ? 409 : 500).json({ 
-      success: false, 
-      message: isDuplicate ? 'Tên bộ đã tồn tại trong cửa hàng' : 'Lỗi server khi tạo bộ số đặc biệt' 
+    res.status(isDuplicate ? 409 : 500).json({
+      success: false,
+      message: isDuplicate ? 'Tên bộ đã tồn tại trong cửa hàng' : 'Lỗi server khi tạo bộ số đặc biệt'
     });
   }
 };
@@ -183,6 +207,7 @@ const deleteGroup = async (req, res) => {
 
 module.exports = {
   listGroups,
+  getAllGroupsForAdmin,
   createGroup,
   updateGroup,
   deleteGroup
