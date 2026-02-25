@@ -140,5 +140,12 @@ if (!module.exports?.schema?.path('allowExportSummary')) {
   });
 }
 
+// Bật/tắt tự động xuất tin nhắn sau 18h30
+if (!module.exports?.schema?.path('autoExportMessage')) {
+  userSchema.add({
+    autoExportMessage: { type: Boolean, default: false }
+  });
+}
+
 
 module.exports = mongoose.model('User', userSchema);

@@ -199,28 +199,28 @@ const getStoreStatistics = async (req, res) => {
               }
               break;
 
-          case '2s':
-            stats['2sTotal'] += betAmount;
-            if (item.numbers) {
-              const numbers = item.numbers.split(',').map(n => n.trim());
-              const amountPerNumber = item.amount || 0;
-              numbers.forEach(num => {
-                stats['2s'][num] = (stats['2s'][num] || 0) + amountPerNumber;
-              });
-            }
-            break;
+            case '2s':
+              stats['2sTotal'] += betAmount;
+              if (item.numbers) {
+                const numbers = item.numbers.split(',').map(n => n.trim());
+                const amountPerNumber = item.amount || 0;
+                numbers.forEach(num => {
+                  stats['2s'][num] = (stats['2s'][num] || 0) + amountPerNumber;
+                });
+              }
+              break;
 
-          case 'deaA':
-            // Đề A tính như 2 số
-            stats.deaATotal += betAmount;
-            if (item.numbers) {
-              const numbers = item.numbers.split(',').map(n => n.trim());
-              const amountPerNumber = item.amount || 0;
-              numbers.forEach(num => {
-                stats.deaA[num] = (stats.deaA[num] || 0) + amountPerNumber;
-              });
-            }
-            break;
+            case 'deaA':
+              // Đề A tính như 2 số
+              stats.deaATotal += betAmount;
+              if (item.numbers) {
+                const numbers = item.numbers.split(',').map(n => n.trim());
+                const amountPerNumber = item.amount || 0;
+                numbers.forEach(num => {
+                  stats.deaA[num] = (stats.deaA[num] || 0) + amountPerNumber;
+                });
+              }
+              break;
 
             case '3s':
               stats['3sTotal'] += betAmount;
@@ -274,10 +274,10 @@ const getStoreStatistics = async (req, res) => {
               }
               break;
 
-          case 'dau':
-            // Sử dụng totalAmount (số tiền khách trả) thay vì amount
-            const dauBetAmount = item.totalAmount || 0;
-            stats.dauTotal += dauBetAmount;
+            case 'dau':
+              // Sử dụng totalAmount (số tiền khách trả) thay vì amount
+              const dauBetAmount = item.totalAmount || 0;
+              stats.dauTotal += dauBetAmount;
               // Cộng tổng tiền khách trả cho nhóm tổng/kép/đầu/đít/bộ
               stats.tongKepDauDitBoTotal += betAmount;
               if (item.numbers) {
@@ -287,27 +287,27 @@ const getStoreStatistics = async (req, res) => {
                   stats.dau[num] = (stats.dau[num] || 0) + amountPerNumber;
                 });
               }
-            break;
+              break;
 
-          case 'dauA':
-            // Đề Đầu A giống đầu
-            {
-              const dauABetAmount = item.totalAmount || 0;
-              stats.dauATotal += dauABetAmount;
-              if (item.numbers) {
-                const numbers = item.numbers.split(',').map(n => n.trim());
-                const amountPerNumber = item.amount || 0;
-                numbers.forEach(num => {
-                  stats.dauA[num] = (stats.dauA[num] || 0) + amountPerNumber;
-                });
+            case 'dauA':
+              // Đề Đầu A giống đầu
+              {
+                const dauABetAmount = item.totalAmount || 0;
+                stats.dauATotal += dauABetAmount;
+                if (item.numbers) {
+                  const numbers = item.numbers.split(',').map(n => n.trim());
+                  const amountPerNumber = item.amount || 0;
+                  numbers.forEach(num => {
+                    stats.dauA[num] = (stats.dauA[num] || 0) + amountPerNumber;
+                  });
+                }
               }
-            }
-            break;
+              break;
 
-          case 'dit':
-            // Sử dụng totalAmount (số tiền khách trả) thay vì amount
-            const ditBetAmount = item.totalAmount || 0;
-            stats.ditTotal += ditBetAmount;
+            case 'dit':
+              // Sử dụng totalAmount (số tiền khách trả) thay vì amount
+              const ditBetAmount = item.totalAmount || 0;
+              stats.ditTotal += ditBetAmount;
               // Cộng tổng tiền khách trả cho nhóm tổng/kép/đầu/đít/bộ
               stats.tongKepDauDitBoTotal += betAmount;
               if (item.numbers) {
@@ -317,22 +317,22 @@ const getStoreStatistics = async (req, res) => {
                   stats.dit[num] = (stats.dit[num] || 0) + amountPerNumber;
                 });
               }
-            break;
+              break;
 
-          case 'ditA':
-            // Đề Đít A giống đít
-            {
-              const ditABetAmount = item.totalAmount || 0;
-              stats.ditATotal += ditABetAmount;
-              if (item.numbers) {
-                const numbers = item.numbers.split(',').map(n => n.trim());
-                const amountPerNumber = item.amount || 0;
-                numbers.forEach(num => {
-                  stats.ditA[num] = (stats.ditA[num] || 0) + amountPerNumber;
-                });
+            case 'ditA':
+              // Đề Đít A giống đít
+              {
+                const ditABetAmount = item.totalAmount || 0;
+                stats.ditATotal += ditABetAmount;
+                if (item.numbers) {
+                  const numbers = item.numbers.split(',').map(n => n.trim());
+                  const amountPerNumber = item.amount || 0;
+                  numbers.forEach(num => {
+                    stats.ditA[num] = (stats.ditA[num] || 0) + amountPerNumber;
+                  });
+                }
               }
-            }
-            break;
+              break;
 
             case 'bo':
               // Sử dụng totalAmount (số tiền khách trả) thay vì amount
@@ -452,9 +452,44 @@ const updateStoreTimeSettings = async (req, res) => {
   }
 };
 
+// Get cài đặt tự động xuất tin nhắn
+const getAutoExportSetting = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const user = await User.findById(adminId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+    }
+    res.json({ success: true, autoExportMessage: user.autoExportMessage || false });
+  } catch (error) {
+    console.error('Lỗi lấy cài đặt tự động xuất:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
+// Cập nhật cài đặt tự động xuất tin nhắn
+const updateAutoExportSetting = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const { autoExportMessage } = req.body;
+    const user = await User.findById(adminId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+    }
+    user.autoExportMessage = Boolean(autoExportMessage);
+    await user.save();
+    res.json({ success: true, message: 'Cập nhật thành công', autoExportMessage: user.autoExportMessage });
+  } catch (error) {
+    console.error('Lỗi cập nhật cài đặt tự động xuất:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
 module.exports = {
   getMyStores,
   getStoreDetail,
   getStoreStatistics,
-  updateStoreTimeSettings
+  updateStoreTimeSettings,
+  getAutoExportSetting,
+  updateAutoExportSetting
 };

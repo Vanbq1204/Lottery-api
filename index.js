@@ -119,8 +119,9 @@ mongoose.connect(MONGODB_URI)
     });
 
     // Khởi động cron job cho auto cleanup
-    const { scheduleAutoCleanup } = require('./services/cronScheduler');
+    const { scheduleAutoCleanup, scheduleAutoExport } = require('./services/cronScheduler');
     scheduleAutoCleanup();
+    scheduleAutoExport();
   })
   .catch((error) => {
     console.error('❌ MongoDB connection error:', error);

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getMyStores, getStoreDetail, getStoreStatistics, updateStoreTimeSettings } = require('../controllers/adminController');
+const { getMyStores, getStoreDetail, getStoreStatistics, updateStoreTimeSettings, getAutoExportSetting, updateAutoExportSetting } = require('../controllers/adminController');
 const { getAdminTotalStatistics } = require('../controllers/adminTotalStatsController');
 const { getAdminPrizeStatistics } = require('../controllers/adminPrizeStatsController');
 const { getStorePrizeStatistics } = require('../controllers/adminStorePrizeStatsController');
@@ -57,6 +57,8 @@ router.delete('/data-cleanup', authenticateToken, requireAdmin, performCleanup);
 router.post('/message-exports/export', authenticateToken, requireAdmin, exportMessages);
 router.get('/message-exports/history', authenticateToken, requireAdmin, getExportHistory);
 router.put('/message-exports/reexport/:snapshotId', authenticateToken, requireAdmin, reexportSnapshot);
+router.get('/message-exports/auto-setting', authenticateToken, requireAdmin, getAutoExportSetting);
+router.put('/message-exports/auto-setting', authenticateToken, requireAdmin, updateAutoExportSetting);
 
 // Đổi mật khẩu admin (tự đổi)
 router.put('/change-password', authenticateToken, requireAdmin, changePassword);

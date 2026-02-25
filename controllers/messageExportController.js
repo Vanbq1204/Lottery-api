@@ -655,3 +655,56 @@ const reexportSnapshot = async (req, res) => {
 };
 
 module.exports.reexportSnapshot = reexportSnapshot;
+
+// Thực hiện tự động xuất tin nhắn cho các admin đã bật (cái này được cron job gọi)
+const performAutoExportMessage = async () => {
+  try {
+    const User = require('../models/User');
+    const admins = await User.find({ role: 'admin', autoExportMessage: true });
+    if (!admins || admins.length === 0) return { success: true, processedCount: 0 };
+
+    const date = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+    const { startOfDay } = getVietnamDayRange(date);
+    const endTime = parseVietnamEndTime(date, '18:30');
+
+    let processedCount = 0;
+    for (const admin of admins) {
+      const adminId = admin._id;
+
+      const last = await MessageExportSnapshot.findOne({ adminId, date }).sort({ sequence: -1 });
+      const startTime = last ? last.endTime : startOfDay;
+
+      // Check if we already auto-exported today around 18:30
+      if (last && last.endTime.getTime() === endTime.getTime()) {
+        continue; // Bỏ qua nếu đã có bản xuất lúc 18h30
+      }
+
+      const stats = await aggregateStatsForWindow(adminId, startTime, endTime);
+      const usedMultiplier = 1.0;
+      const applyScope = { mode: 'exceptLo', types: [] };
+      const messages = buildMessages(stats, { multiplier: usedMultiplier, labels: {}, applyScope });
+
+      const seq = (last?.sequence || 0) + 1;
+      const snapshot = new MessageExportSnapshot({
+        adminId,
+        date,
+        sequence: seq,
+        startTime,
+        endTime,
+        messages,
+        multiplier: usedMultiplier,
+        applyScope,
+        separateExport: false,
+        storeMessages: []
+      });
+      await snapshot.save();
+      processedCount++;
+    }
+    return { success: true, processedCount };
+  } catch (error) {
+    console.error('Error in performAutoExportMessage:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+module.exports.performAutoExportMessage = performAutoExportMessage;
