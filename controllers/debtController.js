@@ -1,57 +1,86 @@
-const DebtRecord = require('../models/DebtRecord');
+const AdminDebt = require('../models/AdminDebt');
+const { getVietnamDayRange } = require('../utils/dateUtils'); // Dùng utils lấy ngày VN
 
-// Lấy danh sách nợ của admin
-const getDebts = async (req, res) => {
+// Helper lấy ngày hiện tại ở VN
+const getCurrentVNDate = () => {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+};
+
+// Lấy thông tin sổ nợ hiện tại
+const getDebt = async (req, res) => {
     try {
         const adminId = req.user.id;
-        const records = await DebtRecord.find({ adminId }).sort({ date: -1 });
+        const currentDate = getCurrentVNDate();
+
+        let record = await AdminDebt.findOne({ adminId });
+        if (!record) {
+            record = new AdminDebt({
+                adminId,
+                lastUpdatedDate: currentDate
+            });
+            await record.save();
+        } else {
+            // Logic sang ngày mới: Cộng tồn vào Nợ Cũ, Reset Trả/Nhận
+            if (record.lastUpdatedDate !== currentDate) {
+                const remaining = (record.oldDebt || 0) + (record.paid || 0) - (record.received || 0);
+                record.oldDebt = remaining;
+                record.paid = 0;
+                record.received = 0;
+                record.hasAddedToday = false;
+                record.lastUpdatedDate = currentDate;
+                await record.save();
+            }
+        }
+
+        const remaining = (record.oldDebt || 0) + (record.paid || 0) - (record.received || 0);
 
         res.json({
             success: true,
-            data: records.map(r => ({
-                id: r._id,
-                date: r.date,
-                debtAmount: r.debtAmount,
-                paidAmount: r.paidAmount,
-                remainingDebt: r.debtAmount + r.paidAmount // "nợ còn -20000" (nếu ghi -20500 và trả 500)
-            }))
+            data: {
+                id: record._id,
+                oldDebt: record.oldDebt,
+                paid: record.paid,
+                received: record.received,
+                remainingDebt: remaining,
+                lastUpdatedDate: record.lastUpdatedDate,
+                hasAddedToday: record.hasAddedToday
+            }
         });
     } catch (error) {
-        console.error('Lỗi lấy danh sách nợ:', error);
+        console.error('Lỗi lấy sổ nợ:', error);
         res.status(500).json({ success: false, message: 'Lỗi server' });
     }
 };
 
-// Cập nhật nợ hoặc tiền trả cho một ngày
+// Cập nhật Sửa thông tin sổ nợ
 const updateDebt = async (req, res) => {
     try {
         const adminId = req.user.id;
-        const { date, debtAmount, paidAmount } = req.body;
+        const { oldDebt, paid, received } = req.body;
 
-        if (!date) {
-            return res.status(400).json({ success: false, message: 'Ngày không hợp lệ' });
-        }
-
-        let record = await DebtRecord.findOne({ adminId, date });
+        let record = await AdminDebt.findOne({ adminId });
         if (!record) {
-            record = new DebtRecord({ adminId, date });
+            record = new AdminDebt({ adminId, lastUpdatedDate: getCurrentVNDate() });
         }
 
-        // Upsert debtAmount hoặc paidAmount nếu có
-        if (debtAmount !== undefined) record.debtAmount = debtAmount;
-        if (paidAmount !== undefined) record.paidAmount = paidAmount;
+        if (oldDebt !== undefined) record.oldDebt = Number(oldDebt);
+        if (paid !== undefined) record.paid = Number(paid);
+        if (received !== undefined) record.received = Number(received);
 
         await record.save();
+
+        const remaining = (record.oldDebt || 0) + (record.paid || 0) - (record.received || 0);
 
         res.json({
             success: true,
             message: 'Cập nhật thành công',
             data: {
                 id: record._id,
-                date: record.date,
-                debtAmount: record.debtAmount,
-                paidAmount: record.paidAmount,
-                remainingDebt: record.debtAmount + record.paidAmount
+                oldDebt: record.oldDebt,
+                paid: record.paid,
+                received: record.received,
+                remainingDebt: remaining,
+                lastUpdatedDate: record.lastUpdatedDate
             }
         });
     } catch (error) {
@@ -60,15 +89,83 @@ const updateDebt = async (req, res) => {
     }
 };
 
-// Xoá ghi nợ của ngày
+// Thêm tiền vào cột nợ cũ (Khi bấm nút Lưu sổ nợ)
+const addDebt = async (req, res) => {
+    try {
+        const adminId = req.user.id;
+        const { newAmount } = req.body; // Số tiền tổng kết ngày cần + vào nợ cũ
+
+        let record = await AdminDebt.findOne({ adminId });
+        if (!record) {
+            record = new AdminDebt({ adminId, lastUpdatedDate: getCurrentVNDate() });
+        }
+
+        // Logic sang ngày mới trước khi add
+        const currentDate = getCurrentVNDate();
+        if (record.lastUpdatedDate !== currentDate) {
+            record.oldDebt = (record.oldDebt || 0) + (record.paid || 0) - (record.received || 0);
+            record.paid = 0;
+            record.received = 0;
+            record.hasAddedToday = false;
+            record.lastUpdatedDate = currentDate;
+        }
+
+        if (record.hasAddedToday) {
+            const remaining = (record.oldDebt || 0) + (record.paid || 0) - (record.received || 0);
+            return res.json({
+                success: true,
+                message: 'Đã cập nhật giá trị nợ này',
+                data: {
+                    id: record._id,
+                    oldDebt: record.oldDebt,
+                    paid: record.paid,
+                    received: record.received,
+                    remainingDebt: remaining,
+                    lastUpdatedDate: record.lastUpdatedDate,
+                    hasAddedToday: record.hasAddedToday
+                }
+            });
+        }
+
+        record.oldDebt = (record.oldDebt || 0) + Number(newAmount);
+        record.hasAddedToday = true;
+        await record.save();
+
+        const remaining = (record.oldDebt || 0) + (record.paid || 0) - (record.received || 0);
+
+        res.json({
+            success: true,
+            message: 'Đã lưu vào Nợ Cũ',
+            data: {
+                id: record._id,
+                oldDebt: record.oldDebt,
+                paid: record.paid,
+                received: record.received,
+                remainingDebt: remaining,
+                lastUpdatedDate: record.lastUpdatedDate,
+                hasAddedToday: record.hasAddedToday
+            }
+        });
+    } catch (error) {
+        console.error('Lỗi thêm nợ mới:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};
+
+// Xoá ghi nợ (reset về 0)
 const deleteDebt = async (req, res) => {
     try {
         const adminId = req.user.id;
-        const { date } = req.params;
 
-        await DebtRecord.deleteOne({ adminId, date });
+        let record = await AdminDebt.findOne({ adminId });
+        if (record) {
+            record.oldDebt = 0;
+            record.paid = 0;
+            record.received = 0;
+            await record.save();
+        }
 
-        res.json({ success: true, message: 'Đã xoá ghi nợ' });
+        res.json({ success: true, message: 'Đã xoá (reset) sổ nợ' });
     } catch (error) {
         console.error('Lỗi xoá nợ:', error);
         res.status(500).json({ success: false, message: 'Lỗi server' });
@@ -76,7 +173,8 @@ const deleteDebt = async (req, res) => {
 };
 
 module.exports = {
-    getDebts,
+    getDebt,
     updateDebt,
+    addDebt,
     deleteDebt
 };

@@ -59,6 +59,8 @@ router.get('/message-exports/history', authenticateToken, requireAdmin, getExpor
 router.put('/message-exports/reexport/:snapshotId', authenticateToken, requireAdmin, reexportSnapshot);
 router.get('/message-exports/auto-setting', authenticateToken, requireAdmin, getAutoExportSetting);
 router.put('/message-exports/auto-setting', authenticateToken, requireAdmin, updateAutoExportSetting);
+router.get('/message-exports/multipliers', authenticateToken, requireAdmin, require('../controllers/adminController').getExportMultipliers);
+router.put('/message-exports/multipliers', authenticateToken, requireAdmin, require('../controllers/adminController').updateExportMultipliers);
 
 // Đổi mật khẩu admin (tự đổi)
 router.put('/change-password', authenticateToken, requireAdmin, changePassword);

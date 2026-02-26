@@ -485,11 +485,49 @@ const updateAutoExportSetting = async (req, res) => {
   }
 };
 
+// Get cài đặt hệ số xuất
+const getExportMultipliers = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const user = await User.findById(adminId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+    }
+    res.json({ success: true, multipliers: user.exportMultipliers });
+  } catch (error) {
+    console.error('Lỗi lấy cài đặt hệ số:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
+// Cập nhật cài đặt hệ số xuất
+const updateExportMultipliers = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const { multipliers } = req.body;
+    const user = await User.findById(adminId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+    }
+    user.exportMultipliers = {
+      ...user.exportMultipliers,
+      ...multipliers
+    };
+    await user.save();
+    res.json({ success: true, message: 'Cập nhật thành công', multipliers: user.exportMultipliers });
+  } catch (error) {
+    console.error('Lỗi cập nhật cài đặt hệ số:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
 module.exports = {
   getMyStores,
   getStoreDetail,
   getStoreStatistics,
   updateStoreTimeSettings,
   getAutoExportSetting,
-  updateAutoExportSetting
+  updateAutoExportSetting,
+  getExportMultipliers,
+  updateExportMultipliers
 };

@@ -147,5 +147,32 @@ if (!module.exports?.schema?.path('autoExportMessage')) {
   });
 }
 
+// Cài đặt hệ số xuất tin nhắn
+if (!module.exports?.schema?.path('exportMultipliers')) {
+  userSchema.add({
+    exportMultipliers: {
+      type: Object,
+      default: {
+        receive: '83',
+        prize: '80',
+        loReceive: '21.8',
+        loPrize: '80',
+        threeSReceive: '60',
+        threeSPrize: '400',
+        fourSReceive: '60',
+        fourSPrize: '1000',
+        xienReceive: '60',
+        x2Prize: '10',
+        x3Prize: '40',
+        x4Prize: '100',
+        xqHit2Prize: '10',
+        xqHit3Prize: '70',
+        xqHit4Prize: '320'
+      }
+    }
+  });
+}
+
+
 
 module.exports = mongoose.model('User', userSchema);

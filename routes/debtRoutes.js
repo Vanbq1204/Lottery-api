@@ -7,8 +7,9 @@ const { authenticateToken, requireRole } = require('../controllers/authControlle
 router.use(authenticateToken);
 router.use(requireRole(['admin', 'superadmin']));
 
-router.get('/', debtController.getDebts);
-router.post('/', debtController.updateDebt);
-router.delete('/:date', debtController.deleteDebt);
+router.get('/', debtController.getDebt);
+router.post('/add', debtController.addDebt);
+router.put('/update', debtController.updateDebt);
+router.delete('/reset', debtController.deleteDebt);
 
 module.exports = router;
