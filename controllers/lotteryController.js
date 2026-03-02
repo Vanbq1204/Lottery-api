@@ -35,7 +35,7 @@ const saveLotteryResult = async (req, res) => {
 
     // Check if lottery result already exists for this turnNum (global, không phụ thuộc store)
     const existingResult = await LotteryResult.findOne({ turnNum });
-    
+
     const LotteryResultHistory = require('../models/LotteryResultHistory');
 
     const toArray = (arr) => Array.isArray(arr) ? arr.map(x => (x || '').trim()) : [];
@@ -57,9 +57,9 @@ const saveLotteryResult = async (req, res) => {
       const after = normalizeResults(results || {});
       existingResult.results = after;
       existingResult.createdBy = userId;
-      
+
       await existingResult.save();
-      
+
       // Ghi lịch sử cập nhật
       try {
         let store, admin;
@@ -82,6 +82,12 @@ const saveLotteryResult = async (req, res) => {
         });
       } catch (histErr) {
         console.error('Write lottery history error:', histErr);
+      }
+
+      // Phát sự kiện socket cho tất cả client
+      const io = req.app.get('socketio');
+      if (io) {
+        io.emit('lottery_result_updated', { turnNum, date: openTimeDate });
       }
 
       return res.status(200).json({
@@ -126,6 +132,12 @@ const saveLotteryResult = async (req, res) => {
         console.error('Write lottery history error:', histErr);
       }
 
+      // Phát sự kiện socket cho tất cả client
+      const io = req.app.get('socketio');
+      if (io) {
+        io.emit('lottery_result_updated', { turnNum, date: openTimeDate });
+      }
+
       return res.status(201).json({
         success: true,
         message: 'Lưu kết quả xổ số thành công',
@@ -165,7 +177,7 @@ const getLotteryResults = async (req, res) => {
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    
+
     const lotteryResults = await LotteryResult.find(query)
       .populate('createdBy', 'name username')
       .sort({ openTime: -1 })
