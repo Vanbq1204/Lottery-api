@@ -26,6 +26,7 @@ const getDebt = async (req, res) => {
                 record.oldDebt = remaining;
                 record.paid = 0;
                 record.received = 0;
+                record.todayAmount = 0;
                 record.hasAddedToday = false;
                 record.lastUpdatedDate = currentDate;
                 await record.save();
@@ -41,6 +42,7 @@ const getDebt = async (req, res) => {
                 oldDebt: record.oldDebt,
                 paid: record.paid,
                 received: record.received,
+                todayAmount: record.todayAmount || 0,
                 remainingDebt: remaining,
                 lastUpdatedDate: record.lastUpdatedDate,
                 hasAddedToday: record.hasAddedToday
@@ -106,6 +108,7 @@ const addDebt = async (req, res) => {
             record.oldDebt = (record.oldDebt || 0) + (record.paid || 0) - (record.received || 0);
             record.paid = 0;
             record.received = 0;
+            record.todayAmount = 0;
             record.hasAddedToday = false;
             record.lastUpdatedDate = currentDate;
         }
@@ -120,6 +123,7 @@ const addDebt = async (req, res) => {
                     oldDebt: record.oldDebt,
                     paid: record.paid,
                     received: record.received,
+                    todayAmount: record.todayAmount || 0,
                     remainingDebt: remaining,
                     lastUpdatedDate: record.lastUpdatedDate,
                     hasAddedToday: record.hasAddedToday
@@ -128,6 +132,7 @@ const addDebt = async (req, res) => {
         }
 
         record.oldDebt = (record.oldDebt || 0) + Number(newAmount);
+        record.todayAmount = Number(newAmount);
         record.hasAddedToday = true;
         await record.save();
 
@@ -141,6 +146,7 @@ const addDebt = async (req, res) => {
                 oldDebt: record.oldDebt,
                 paid: record.paid,
                 received: record.received,
+                todayAmount: record.todayAmount,
                 remainingDebt: remaining,
                 lastUpdatedDate: record.lastUpdatedDate,
                 hasAddedToday: record.hasAddedToday
@@ -162,6 +168,7 @@ const deleteDebt = async (req, res) => {
             record.oldDebt = 0;
             record.paid = 0;
             record.received = 0;
+            record.todayAmount = 0;
             await record.save();
         }
 
