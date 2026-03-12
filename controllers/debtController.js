@@ -23,17 +23,54 @@ const getDebt = async (req, res) => {
             // Logic sang ngày mới: Cộng tồn vào Nợ Cũ, Reset Trả/Nhận
             if (record.lastUpdatedDate !== currentDate) {
                 // Tính toán còn lại của ngày hôm qua
-                // Công thức cũ: remaining = oldDebt + paid - received (nhưng oldDebt đã bao gồm số mới)
-                // Công thức mới: remaining = todayAmount + paid - received (todayAmount là tổng nợ hôm nay)
-                // Tuy nhiên, logic cũ lưu oldDebt = old + new, nên remaining tính theo oldDebt là đúng với dữ liệu cũ.
-                // Để chuyển đổi mượt mà, ta cần xem xét dữ liệu hiện tại.
-                // Giả sử logic cũ đang chạy: oldDebt chứa tổng.
-                // Vậy remaining = oldDebt + paid - received.
+                // Logic trước đó: todayAmount = remaining (bao gồm cả oldDebt).
+                // Nhưng theo yêu cầu mới: "Hôm nay" chỉ chứa phần phát sinh mới. "Nợ cũ" chứa phần còn lại hôm qua.
+                // "Hôm nay" hôm qua (giá trị đã lưu) + "Nợ cũ" hôm qua + "Đã trả" - "Đã nhận".
+                // Nhưng lưu ý: Logic addDebt trước đó có thể đã cộng dồn oldDebt vào todayAmount (ở phiên bản trước nữa).
+                // Hoặc todayAmount = oldDebt + newAmount.
                 
-                const remaining = (record.oldDebt || 0) + (record.paid || 0) - (record.received || 0);
+                // Để tính chính xác Remaining hôm qua:
+                // remaining = todayAmount + paid - received (nếu todayAmount đã bao gồm oldDebt theo logic cũ).
+                // Hoặc remaining = todayAmount + oldDebt + paid - received (theo logic mới hoàn toàn).
                 
-                record.oldDebt = remaining;
-                record.todayAmount = remaining; // Hôm nay bắt đầu bằng Nợ cũ
+                // Chúng ta cần chuyển đổi an toàn.
+                // Giả sử record đang ở trạng thái của ngày hôm qua.
+                // Nếu chạy theo logic cũ: oldDebt chứa tổng nợ.
+                // Nếu chạy theo logic vừa sửa: todayAmount chứa tổng nợ (bao gồm oldDebt).
+                
+                // Hãy tính remaining dựa trên logic hiện tại của record đó.
+                // Cách an toàn nhất là lấy remaining hiện tại được tính toán trước đó.
+                // Nhưng ta không lưu remaining trong DB.
+                
+                // Kiểm tra xem todayAmount có > 0 không.
+                // Nếu todayAmount > 0, có thể nó chứa tổng nợ (theo logic vừa sửa) hoặc chỉ nợ mới (nếu chưa sửa xong).
+                // Tuy nhiên, logic addDebt vừa rồi là: todayAmount = oldDebt + newAmount.
+                // Vậy remaining = todayAmount + paid - received.
+                
+                // Nếu todayAmount = 0 (chưa addDebt hôm qua), thì remaining = oldDebt.
+                
+                // Tuy nhiên, logic mới yêu cầu:
+                // Remaining hôm qua -> OldDebt hôm nay.
+                // TodayAmount hôm nay -> 0.
+                
+                // Tính Remaining hôm qua:
+                let previousRemaining = 0;
+                // Nếu record theo logic cũ (oldDebt là tổng):
+                previousRemaining = (record.oldDebt || 0) + (record.paid || 0) - (record.received || 0);
+                
+                // Nếu record đã có todayAmount (theo logic vừa sửa, todayAmount = old + new):
+                // Thì remaining phải tính dựa trên todayAmount.
+                // Nhưng cẩn thận: trong logic addDebt vừa rồi: record.todayAmount = (record.oldDebt || 0) + Number(newAmount);
+                // Vậy todayAmount đã bao gồm oldDebt.
+                // Khi đó remaining = todayAmount + paid - received.
+                
+                if (record.todayAmount && record.hasAddedToday) {
+                     previousRemaining = record.todayAmount + (record.paid || 0) - (record.received || 0);
+                }
+
+                // Cập nhật cho ngày mới
+                record.oldDebt = previousRemaining;
+                record.todayAmount = 0; // Hôm nay về 0
                 record.paid = 0;
                 record.received = 0;
                 record.hasAddedToday = false;
@@ -42,7 +79,8 @@ const getDebt = async (req, res) => {
             }
         }
 
-        const remaining = (record.todayAmount || 0) + (record.paid || 0) - (record.received || 0);
+        // Logic hiển thị: Remaining = OldDebt + TodayAmount + Paid - Received
+        const remaining = (record.oldDebt || 0) + (record.todayAmount || 0) + (record.paid || 0) - (record.received || 0);
 
         res.json({
             success: true,
@@ -81,7 +119,7 @@ const updateDebt = async (req, res) => {
 
         await record.save();
 
-        const remaining = (record.todayAmount || 0) + (record.paid || 0) - (record.received || 0);
+        const remaining = (record.oldDebt || 0) + (record.todayAmount || 0) + (record.paid || 0) - (record.received || 0);
 
         res.json({
             success: true,
@@ -116,23 +154,14 @@ const addDebt = async (req, res) => {
         // Logic sang ngày mới trước khi add
         const currentDate = getCurrentVNDate();
         if (record.lastUpdatedDate !== currentDate) {
-            // Tính toán remaining ngày cũ
-            // Nếu record cũ chạy theo logic cũ (oldDebt chứa tổng), thì remaining = oldDebt + paid - received
-            // Nếu record cũ chạy theo logic mới (todayAmount chứa tổng), thì remaining = todayAmount + paid - received
-            // Để an toàn, ta giả định todayAmount luôn được cập nhật đúng. 
-            // Nhưng nếu todayAmount = 0 (logic cũ reset), thì ta dựa vào oldDebt.
-            // Tuy nhiên, logic addDebt cũ cập nhật cả oldDebt và todayAmount.
+            // Logic tương tự getDebt
+            let previousRemaining = (record.oldDebt || 0) + (record.paid || 0) - (record.received || 0);
+             if (record.todayAmount && record.hasAddedToday) {
+                 previousRemaining = record.todayAmount + (record.paid || 0) - (record.received || 0);
+            }
             
-            // Ta sẽ ưu tiên dùng todayAmount nếu nó > 0 hoặc hasAddedToday = true.
-            // Nhưng logic cũ reset todayAmount = 0 khi sang ngày mới.
-            // Nên khi sang ngày mới ở đây, ta lấy oldDebt (đã được update cuối ngày hôm trước? Không, getDebt update).
-            // Nếu getDebt chưa chạy, thì record vẫn là của ngày hôm qua.
-            
-            // Logic cũ: oldDebt chứa tổng.
-            const remaining = (record.oldDebt || 0) + (record.paid || 0) - (record.received || 0);
-            
-            record.oldDebt = remaining;
-            record.todayAmount = remaining; // Reset today = old
+            record.oldDebt = previousRemaining;
+            record.todayAmount = 0;
             record.paid = 0;
             record.received = 0;
             record.hasAddedToday = false;
@@ -140,10 +169,15 @@ const addDebt = async (req, res) => {
         }
 
         if (record.hasAddedToday) {
-            const remaining = (record.todayAmount || 0) + (record.paid || 0) - (record.received || 0);
+            // Nếu đã add rồi, cập nhật lại todayAmount bằng newAmount (ghi đè)
+            // User: "Khi bấm lưu vào sổ nợ thì hôm nay sẽ cập nhật = giá trị của giá trị đó"
+            record.todayAmount = Number(newAmount);
+            await record.save();
+
+            const remaining = (record.oldDebt || 0) + (record.todayAmount || 0) + (record.paid || 0) - (record.received || 0);
             return res.json({
                 success: true,
-                message: 'Đã cập nhật giá trị nợ này',
+                message: 'Đã cập nhật giá trị hôm nay',
                 data: {
                     id: record._id,
                     oldDebt: record.oldDebt,
@@ -157,22 +191,13 @@ const addDebt = async (req, res) => {
             });
         }
 
-        // Logic MỚI: Không cộng vào oldDebt nữa. Chỉ cộng vào todayAmount.
-        // todayAmount = oldDebt + newAmount
-        // (Lưu ý: todayAmount đã được khởi tạo bằng oldDebt ở trên hoặc ở getDebt)
-        // Nếu todayAmount chưa được khởi tạo (trường hợp record mới tinh trong ngày), nó nên là oldDebt.
-        if (record.todayAmount === undefined || record.todayAmount === null) {
-             record.todayAmount = record.oldDebt || 0;
-        }
-        
-        record.todayAmount = (record.oldDebt || 0) + Number(newAmount);
-        
-        // record.oldDebt không đổi
+        // Logic MỚI: Chỉ cập nhật todayAmount = newAmount. Không cộng vào oldDebt.
+        record.todayAmount = Number(newAmount);
         
         record.hasAddedToday = true;
         await record.save();
 
-        const remaining = (record.todayAmount || 0) + (record.paid || 0) - (record.received || 0);
+        const remaining = (record.oldDebt || 0) + (record.todayAmount || 0) + (record.paid || 0) - (record.received || 0);
 
         res.json({
             success: true,
