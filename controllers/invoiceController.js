@@ -181,9 +181,23 @@ const getInvoicesByStore = async (req, res) => {
 
     const total = await Invoice.countDocuments(query);
 
+    // Lấy lịch sử sửa đổi cho các hóa đơn này
+    const invoiceIds = invoices.map(inv => inv.invoiceId);
+    const histories = await InvoiceHistory.find({
+      invoiceId: { $in: invoiceIds },
+      action: 'edit'
+    }).sort({ actionDate: 1 });
+
+    // Gắn lịch sử vào từng hóa đơn
+    const invoicesWithHistory = invoices.map(inv => {
+      const invObj = inv.toObject();
+      invObj.editHistory = histories.filter(h => h.invoiceId === inv.invoiceId);
+      return invObj;
+    });
+
     res.json({
       success: true,
-      invoices,
+      invoices: invoicesWithHistory,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
       total
