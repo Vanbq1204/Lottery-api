@@ -142,69 +142,112 @@ const saveInvoice = async (req, res) => {
   }
 };
 
-// Lấy danh sách hóa đơn theo store
+// Lấy danh sách hóa đơn theo cửa hàng
 const getInvoicesByStore = async (req, res) => {
   try {
-    const employeeId = req.user.id;
-    const employee = await User.findById(employeeId);
+    const { startDate, endDate, limit = 100 } = req.query;
+    const user = req.user;
 
-    if (!employee) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy nhân viên' });
-    }
-
-    const { page = 1, limit = 20, startDate, endDate } = req.query;
-
-    // Build query
-    const query = { storeId: employee.storeId };
-
+    // Build date query
+    let dateQuery = {};
     if (startDate || endDate) {
-      query.printedAt = {};
-
+      dateQuery.printedAt = {};
       if (startDate) {
-        // Create Vietnam timezone range for the date
-        const startOfDay = new Date(startDate + 'T00:00:00+07:00');
-        query.printedAt.$gte = startOfDay;
+        const { startOfDay } = getVietnamDayRange(startDate);
+        dateQuery.printedAt.$gte = startOfDay;
       }
-
       if (endDate) {
-        // Create Vietnam timezone range for the date
-        const endOfDay = new Date(endDate + 'T23:59:59.999+07:00');
-        query.printedAt.$lte = endOfDay;
+        const { endOfDay } = getVietnamDayRange(endDate);
+        dateQuery.printedAt.$lte = endOfDay;
       }
     }
 
-    const invoices = await Invoice.find(query)
-      .populate('employeeId', 'name username')
+    // 1. Lấy hóa đơn ACTIVE từ bảng Invoice
+    const invoiceQuery = {
+      storeId: user.storeId,
+      ...dateQuery
+    };
+
+    const activeInvoices = await Invoice.find(invoiceQuery)
       .sort({ printedAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .limit(parseInt(limit));
 
-    const total = await Invoice.countDocuments(query);
+    // 2. Lấy hóa đơn DELETED từ bảng InvoiceHistory
+    // History query dùng actionDate thay vì printedAt
+    let historyDateQuery = {};
+    if (startDate || endDate) {
+      historyDateQuery.actionDate = {};
+      if (startDate) {
+        const { startOfDay } = getVietnamDayRange(startDate);
+        historyDateQuery.actionDate.$gte = startOfDay;
+      }
+      if (endDate) {
+        const { endOfDay } = getVietnamDayRange(endDate);
+        historyDateQuery.actionDate.$lte = endOfDay;
+      }
+    }
 
-    // Lấy lịch sử sửa đổi cho các hóa đơn này
-    const invoiceIds = invoices.map(inv => inv.invoiceId);
-    const histories = await InvoiceHistory.find({
-      invoiceId: { $in: invoiceIds },
+    const deletedHistories = await InvoiceHistory.find({
+      storeId: user.storeId,
+      action: 'delete',
+      ...historyDateQuery
+    }).sort({ actionDate: -1 }); // Lấy các lần xóa gần nhất
+
+    // 3. Lấy lịch sử EDIT cho active invoices
+    const activeInvoiceIds = activeInvoices.map(inv => inv.invoiceId);
+    const editHistories = await InvoiceHistory.find({
+      invoiceId: { $in: activeInvoiceIds },
       action: 'edit'
     }).sort({ actionDate: 1 });
 
-    // Gắn lịch sử vào từng hóa đơn
-    const invoicesWithHistory = invoices.map(inv => {
+    // 4. Chuẩn hóa active invoices
+    const formattedActiveInvoices = activeInvoices.map(inv => {
       const invObj = inv.toObject();
-      invObj.editHistory = histories.filter(h => h.invoiceId === inv.invoiceId);
+      invObj.editHistory = editHistories.filter(h => h.invoiceId === inv.invoiceId);
+      invObj.isDeleted = false;
       return invObj;
     });
 
+    // 5. Chuẩn hóa deleted invoices từ history
+    // Lưu ý: deletedHistories chứa thông tin tại thời điểm xóa.
+    // oldData chứa nội dung hóa đơn trước khi xóa.
+    const formattedDeletedInvoices = deletedHistories.map(hist => {
+      // Khôi phục cấu trúc hóa đơn từ oldData
+      const restoredInvoice = {
+        _id: hist.originalInvoiceId || hist._id, // Dùng ID nào cũng được, miễn là unique cho key
+        invoiceId: hist.invoiceId,
+        customerName: hist.oldData?.customerName || 'Khách lẻ',
+        items: hist.oldData?.items || [],
+        totalAmount: hist.oldData?.totalAmount || 0,
+        customerPaid: hist.oldData?.customerPaid || 0,
+        changeAmount: hist.oldData?.changeAmount || 0,
+        printedAt: hist.oldData?.printedAt || hist.actionDate, // Ưu tiên ngày tạo gốc, fallback ngày xóa
+        storeId: hist.storeId,
+        adminId: hist.adminId,
+        isDeleted: true,
+        deletedAt: hist.actionDate,
+        deleteReason: hist.reason,
+        deletedBy: hist.employeeId,
+        editHistory: [] // Hóa đơn xóa có thể coi là kết thúc vòng đời
+      };
+      return restoredInvoice;
+    });
+
+    // 6. Gộp và sắp xếp lại theo thời gian tạo (printedAt) giảm dần
+    const allInvoices = [...formattedActiveInvoices, ...formattedDeletedInvoices].sort((a, b) => {
+      return new Date(b.printedAt) - new Date(a.printedAt);
+    });
+
+    // Cắt theo limit nếu cần (tuy nhiên limit ở trên áp dụng cho mỗi nguồn riêng, gộp lại có thể > limit)
+    // Nếu muốn strict limit thì slice lại. Ở đây ta cứ trả về hết số lượng đã lấy được.
+
     res.json({
       success: true,
-      invoices: invoicesWithHistory,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-      total
+      invoices: allInvoices
     });
 
   } catch (error) {
-    console.error('Get invoices error:', error);
+    console.error('Get invoices by store error:', error);
     res.status(500).json({
       success: false,
       message: 'Lỗi server khi lấy danh sách hóa đơn',
